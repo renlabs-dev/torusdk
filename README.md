@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Discord Chat](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://go.agicommies.org/commune-discord)
-[![PyPI version](https://badge.fury.io/py/communex.svg)](https://pypi.org/project/communex/)
+[![PyPI version](https://badge.fury.io/py/torus.svg)](https://pypi.org/project/torus/)
 
-- [Why CommuneX](#why-communex)
+- [Why CommuneX](#why-torus)
 - [Installation with `pip`](#installation-with-pip)
 - [Installation with Nix](#installation-with-nix)
 - [Features](#features)
@@ -20,27 +20,27 @@
 CommuneX serves as an alternative library/SDK to the original [Commune
 Ai](https://github.com/commune-ai/commune) codebase, offering a streamlined and
 user-friendly experience. It is designed for simplicity and scalable
-development. To learn more [visit docs](https://docs.communex.ai/communex)
+development. To learn more [visit docs](https://docs.torus.ai/torus)
 
 ## Installation with `pip`
 
 Requirements: Python 3.10+
 
-Install the `communex` Python package directly with `pip`:
+Install the `torus` Python package directly with `pip`:
 
 ```sh
-pip install communex
+pip install torus
 ```
 
 Or add it to your Poetry project with:
 
 ```sh
-poetry add communex
+poetry add torus
 ```
 
 ## Installation with Nix
 
-To install `communex` the communex cli with Nix
+To install `torus` the torus cli with Nix
 ```sh
 nix profile install .
 ```
@@ -176,8 +176,8 @@ it can [require some enviroment-specific binaries to be installed][ruff-installa
 
 ## Commune compatibility
 
-Yes, `communex` is compatible with the `commune` library/CLI. However, there are
-important considerations to note. `communex` verifies the integrity of your
+Yes, `torus` is compatible with the `commune` library/CLI. However, there are
+important considerations to note. `torus` verifies the integrity of your
 keys, which means that mixing certain types of keys is not permissible.
 Specifically, if you possess node keys or other similar types that are not
 designed to receive tokens, you to relocate them outside of the key
@@ -185,7 +185,7 @@ directory.
 
 ---
 
-[open an issue on GitHub]: https://github.com/agicommies/communex/issues/new/choose
-[CommuneX Discord channel]: https://go.agicommies.org/communex-channel
-[GitHub discussions page]: https://github.com/agicommies/communex/discussions
+[open an issue on GitHub]: https://github.com/agicommies/torus/issues/new/choose
+[CommuneX Discord channel]: https://go.agicommies.org/torus-channel
+[GitHub discussions page]: https://github.com/agicommies/torus/discussions
 [ruff-installation]: https://docs.astral.sh/ruff/installation/

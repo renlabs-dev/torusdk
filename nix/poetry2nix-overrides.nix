@@ -4,7 +4,7 @@ let
   lib = pkgs.lib;
 
   pypkgs-build-requirements = {
-    communex = [ "poetry-core" ];
+    torus = [ "poetry-core" ];
     keylimiter = [ "poetry-core" ];
     scalecodec = [ "setuptools" ];
     streamlit = [ "setuptools" ];

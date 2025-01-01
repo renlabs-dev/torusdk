@@ -9,20 +9,20 @@ The `comx module serve` command is a powerful tool that allows you to effortless
 To install the Communex CLI, run the following command:
 
 ```sh
-pip install communex
+pip install torus
 ```
 
 ## Usage
 
 To serve a Python module, ensure that it's a class inheriting from our `Module` class. Then, use our `endpoint` decorator on the methods that you want to expose as endpoints. You can refer to the `example` folder to see this being done.
 
-With a class that inherits from `Module` and the communex CLI installed, you can simply run:
+With a class that inherits from `Module` and the torus CLI installed, you can simply run:
 
 ```
 comx module serve <qualified_path> <key>
 ```
 
-- `qualified_path`: The dotted path to the class that should be served. For example, `communex.module.example.openai.OpenAI`.
+- `qualified_path`: The dotted path to the class that should be served. For example, `torus.module.example.openai.OpenAI`.
 - `port`: The port that the API should run on your computer.
 - `key`: The name of the key file of your module.
 - `subnets`: The subnets that your module will serve. Calls from keys of any other subnet will be refused.
@@ -44,7 +44,7 @@ export OPENAI_API_KEY=your_openai_api_key
 Then run the following command:
 
 ```sh
-comx module serve communex.module.example.gpt.OpenAIModule <key> 
+comx module serve torus.module.example.gpt.OpenAIModule <key> 
 ```
 
 To run module using pm2, install it globally:
@@ -56,7 +56,7 @@ npm install -g pm2
 Then run the following command:
 
 ```sh
-pm2 start "comx module serve communex.module.example.gpt.OpenAIModule <key>" --name "openai"
+pm2 start "comx module serve torus.module.example.gpt.OpenAIModule <key>" --name "openai"
 ```
 
 ## Communication

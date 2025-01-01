@@ -34,12 +34,12 @@
           ];
         };
         packages = rec {
-          communex = p2n.mkPoetryApplication {
+          torus = p2n.mkPoetryApplication {
             projectDir = ./.;
             python = python;
             overrides = p2n-overrides;
           };
-          default = communex;
+          default = torus;
         };
       });
 }

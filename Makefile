@@ -38,17 +38,17 @@ test_slow:
 	pytest -k "slow"
 
 docs_run:
-	@echo "URL: http://localhost:8080/communex"
-	pdoc -n --docformat google ./src/communex
+	@echo "URL: http://localhost:8080/torus"
+	pdoc -n --docformat google ./src/torus
 
 docs_generate:
-	pdoc communex \
+	pdoc torus \
 		--docformat google \
 		--output-directory ./docs/_build \
 		--logo assets/logo.png \
 		--favicon assets/favicon.ico \
-		--logo-link https://github.com/agicommies/communex \
-		--edit-url communex=https://github.com/agicommies/communex/blob/main/src/communex/
+		--logo-link https://github.com/agicommies/torus \
+		--edit-url torus=https://github.com/agicommies/torus/blob/main/src/torus/
 
 docs_copy_assets:
 	mkdir -p ./docs/_build/assets
