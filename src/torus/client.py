@@ -82,7 +82,7 @@ def _instantiate_substrateinterface(
 
 class TorusClient:
     """
-    A client for interacting with Commune network nodes, querying storage,
+    A client for interacting with Torus network nodes, querying storage,
     submitting transactions, etc.
 
     Attributes:
@@ -90,7 +90,7 @@ class TorusClient:
 
     Example:
     ```py
-    client = CommuneClient()
+    client = TorusClient()
     client.query(name='function_name', params=['param1', 'param2'])
     ```
 
@@ -1794,7 +1794,7 @@ class TorusClient:
         Args:
             key: The keypair used for signing the proposal transaction.
             params: A dictionary containing global network parameters
-                    like maximum allowed subnets, modules,
+                    like maximum allowed subnets, agents,
                     transaction rate limits, and others.
 
         Returns:
@@ -2358,7 +2358,7 @@ class TorusClient:
         Retrieves a mapping of immunity periods for the network.
 
         Queries the network for the immunity period settings,
-        which represent the time duration during which modules
+        which represent the time duration during which agents
         can not get deregistered.
 
         Returns:
@@ -2845,7 +2845,7 @@ class TorusClient:
     def get_n(self, netuid: int = 0) -> int:
         """
         Queries the network for the 'N' hyperparameter, which represents how
-        many modules are on the network.
+        many agents are on the network.
 
         Args:
             netuid: The network UID for which to query the 'N' hyperparameter.
@@ -3256,13 +3256,13 @@ class TorusClient:
 
     def get_max_allowed_modules(self) -> int:
         """
-        Queries the network for the maximum number of allowed modules.
+        Queries the network for the maximum number of allowed agents.
 
-        Retrieves the upper limit on the number of modules that
+        Retrieves the upper limit on the number of agents that
         can be registered within the network.
 
         Returns:
-            The maximum number of allowed modules on the network.
+            The maximum number of allowed agents on the network.
 
         Raises:
             QueryError: If the query to the network fails or is invalid.
@@ -3427,11 +3427,11 @@ class TorusClient:
         amount_nano: int,
         dest: Ss58Address,
     ):
-        params = {"dest": dest, "value": amount_nano, "data": data}
+        params = {"destination_key": dest, "value": amount_nano, "data": data}
 
         return self.compose_call(
             module="Governance",
-            fn="add_transfer_dao_treasury_proposal",
+            fn="add_dao_treasury_transfer_proposal",
             params=params,
             key=key,
         )

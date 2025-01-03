@@ -1361,13 +1361,13 @@ files = [
 
 [[package]]
 name = "openai"
-version = "1.58.1"
+version = "1.59.2"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "openai-1.58.1-py3-none-any.whl", hash = "sha256:e2910b1170a6b7f88ef491ac3a42c387f08bd3db533411f7ee391d166571d63c"},
-    {file = "openai-1.58.1.tar.gz", hash = "sha256:f5a035fd01e141fc743f4b0e02c41ca49be8fab0866d3b67f5f29b4f4d3c0973"},
+    {file = "openai-1.59.2-py3-none-any.whl", hash = "sha256:3de721df4d2ccc5e845afa7235dce496bfbdd572692a876d2ae6211e0290ff22"},
+    {file = "openai-1.59.2.tar.gz", hash = "sha256:1bf2d5e8a93533f6dd3fb7b1bcf082ddd4ae61cc6d89ca1343e5957e4720651c"},
 ]
 
 [package.dependencies]
@@ -2094,13 +2094,13 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
 name = "pydantic-settings"
-version = "2.7.0"
+version = "2.7.1"
 description = "Settings management using Pydantic"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pydantic_settings-2.7.0-py3-none-any.whl", hash = "sha256:e00c05d5fa6cbbb227c84bd7487c5c1065084119b750df7c8c1a554aed236eb5"},
-    {file = "pydantic_settings-2.7.0.tar.gz", hash = "sha256:ac4bfd4a36831a48dbf8b2d9325425b549a0a6f18cea118436d728eb4f1c4d66"},
+    {file = "pydantic_settings-2.7.1-py3-none-any.whl", hash = "sha256:590be9e6e24d06db33a4262829edef682500ef008565a969c73d39d5f8bfb3fd"},
+    {file = "pydantic_settings-2.7.1.tar.gz", hash = "sha256:10c9caad35e64bfb3c2fbf70a078c0e25cc92499782e5200747f942a065dec93"},
 ]
 
 [package.dependencies]
@@ -2400,32 +2400,30 @@ files = [
 [[package]]
 name = "torustrateinterface"
 version = "0.1.0"
-description = "Your project description"
+description = "substrate-interface fork"
 optional = false
-python-versions = ">=3.10,<4.0"
-files = []
-develop = true
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "torustrateinterface-0.1.0-py3-none-any.whl", hash = "sha256:905975d6a48b9cf8c65cc989e70bf6bf764ef8950bf2bdfa3a791498fc0138fb"},
+    {file = "torustrateinterface-0.1.0.tar.gz", hash = "sha256:d41cd994a09d5cd105cf3e4b438f7f53ae881dc60e4661bccb1391c37779e42a"},
+]
 
 [package.dependencies]
-certifi = "^2019.3.9"
-ecdsa = "^0.17.0, <1"
-eth-keys = "^0.2.1, <1"
-eth-utils = "^1.3.0, <6"
-idna = "^2.1.0, <4"
-py-bip39-bindings = "^0.1.9, <1"
-py-ed25519-zebra-bindings = "^1.0, <2"
-py-sr25519-bindings = "^0.2.0, <1"
-pycryptodome = "^3.11.0, <4"
-PyNaCl = "^1.0.1, <2"
-requests = "^2.21.0, <3"
-scalecodec = "^1.2.7"
-setuptools = "^75.0.0"
-websocket-client = "^0.57.0, <2"
-xxhash = "^1.3.0, <4"
-
-[package.source]
-type = "directory"
-url = "../../../torustrate-interface"
+certifi = ">=2019.3.9,<2020.0.0"
+ecdsa = ">=0.17.0,<0.18.0"
+eth-keys = ">=0.2.1,<0.3.0"
+eth-utils = ">=1.3.0,<2.0.0"
+idna = ">=2.1.0,<3.0.0"
+py-bip39-bindings = ">=0.1.9,<0.2.0"
+py-ed25519-zebra-bindings = ">=1.0,<2.0"
+py-sr25519-bindings = ">=0.2.0,<0.3.0"
+pycryptodome = ">=3.11.0,<4.0.0"
+PyNaCl = ">=1.0.1,<2.0.0"
+requests = ">=2.21.0,<3.0.0"
+scalecodec = ">=1.2.7,<2.0.0"
+setuptools = ">=75.0.0,<76.0.0"
+websocket-client = ">=0.57.0,<0.58.0"
+xxhash = ">=1.3.0,<2.0.0"
 
 [[package]]
 name = "tqdm"
@@ -2730,4 +2728,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "9aa48af3e98abeb647f0ad87a8bf37f68c20d6c0b872e614b7a9d5574843bb29"
+content-hash = "11fdfe1e4808ceeed1dad9cf644811546ca03e6370a18a238e64be32bfeee718"

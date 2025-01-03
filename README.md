@@ -1,32 +1,38 @@
-# CommuneX
+# Torus CLI
+
+The Torus CLI serves as an official SDK for the network, offering a streamlined and
+user-friendly experience. It is designed for simplicity and scalable
+development. To learn more [visit docs](https://docs.torus.network/installation/setup-torus-cli)
+
+## Contents
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Discord Chat](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://go.agicommies.org/commune-discord)
+[![Discord Chat](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/W2H8Q6aE)
 [![PyPI version](https://badge.fury.io/py/torus.svg)](https://pypi.org/project/torus/)
 
-- [Why CommuneX](#why-torus)
-- [Installation with `pip`](#installation-with-pip)
-- [Installation with Nix](#installation-with-nix)
-- [Features](#features)
-  - [Planned](#planned)
-- [CLI Usage](#cli-usage)
+- [Torus CLI](#torus-cli)
+  - [Contents](#contents)
+  - [Installation with `pip`](#installation-with-pip)
+  - [Installation with Nix](#installation-with-nix)
+  - [Features](#features)
+  - [CLI Usage](#cli-usage)
   - [Examples](#examples)
+    - [Retrieving Balance](#retrieving-balance)
+    - [Creating a Key](#creating-a-key)
+    - [Retrieving Key Info](#retrieving-key-info)
+    - [Listing Keys](#listing-keys)
+    - [List Keys With Balances](#list-keys-with-balances)
+    - [Retrieving Agent Information](#retrieving-agent-information)
+    - [Retrieving Global Parameters](#retrieving-global-parameters)
+    - [Retrieving Circulating Supply](#retrieving-circulating-supply)
   - [Completions](#completions)
-- [Contributing](#contributing)
-- [Commune compatibility](#commune-compatibility)
-
-## Why CommuneX
-
-CommuneX serves as an alternative library/SDK to the original [Commune
-Ai](https://github.com/commune-ai/commune) codebase, offering a streamlined and
-user-friendly experience. It is designed for simplicity and scalable
-development. To learn more [visit docs](https://docs.torus.ai/torus)
+  - [Contributing](#contributing)
 
 ## Installation with `pip`
 
 Requirements: Python 3.10+
 
-Install the `torus` Python package directly with `pip`:
+Install the `torus-cli` Python package directly with `pip`:
 
 ```sh
 pip install torus
@@ -47,123 +53,112 @@ nix profile install .
 
 ## Features
 
-- [x] Commands
-  - [x] Key management
-  - [x] Transfering and staking tokens
-  - [x] Module management
-  - [x] Client to interact with served modules
-  - [x] Module class and server
-  - [x] Governance participation 
+The `torus-cli` offers a variety of features for token management and agent interaction:
 
-### Planned
+- Commands for managing keys, tokens, and agents
+- Key management including creation and listing
+- Token operations such as transferring and staking
+- Agent management for registration, curation and updates
+- Participation in governance processes
 
-- [ ] Module API extraction and documentation generator
 
 ## CLI Usage
 
 The CLI commands are structured as follows:
 
 ```sh
-comx [OPTIONS] COMMAND [ARGS]
+torus-cli [OPTIONS] COMMAND [ARGS]
 ```
 
 There are six top-level subcommands:
 
-- **balance**: transfer, stake, unstake and showing balance operations
-- **key**: creating, saving (AKA regenerating), listing and showing balance
-  operations
-- **module**: info, list, register, serve, update
-- **network**: block, parameters, proposals / proposing, voting operations
-- **subnet**: info, list, update
-- **misc**: apr, circulating supply
+- **balance**: Manage token balances and staking.
+- **key**: Handle key creation and management.
+- **agent**: Manage information and operations related to agents.
+- **network**: Interact with network operations like block and proposal management.
+- **misc**: Access miscellaneous information such as APR and circulating supply.
 
 ```sh
-comx subcommand [OPTIONS] COMMAND [ARGS]...
+torus-cli subcommand [OPTIONS] COMMAND [ARGS]...
 ```
 
-### Examples
+## Examples
 
-#### Retrieving Balance
+### Retrieving Balance
 
 ```sh
 # Show staked, free and total balance.
-comx balance show 5FgfC2DY4yreEWEughz46RZYQ8oBhHVqD9fVq6gV89E6z4Ea 
+torus-cli balance show 5FgfC2DY4yreEWEughz46RZYQ8oBhHVqD9fVq6gV89E6z4Ea
 ```
 
-#### Creating a Key
+### Creating a Key
 
 ```sh
-comx key create key_name
+torus-cli key create key_name
 ```
 
-#### Retrieving Key Info
+### Retrieving Key Info
 
 ```sh
-comx key show key_name
+torus-cli key show key_name
 
-# Add the `--show-private` flag to show sentitive fields like private key.
-comx key show key_name --show-private
+# Add the `--show-private` flag to show sensitive fields like private key.
+torus-cli key show key_name --show-private
 ```
 
-#### Listing Keys
+### Listing Keys
 
 ```sh
 # Lists the names and addresses of keys stored on disk.
-comx key list 
+torus-cli key list
 ```
 
-#### List Keys With Balances
+### List Keys With Balances
 
 ```sh
 # Lists keys stored on disk with their balance (free, staked and total).
-comx key balances
+torus-cli key balances
 ```
 
-#### Retrieving Module Information
+### Retrieving Agent Information
 
 ```sh
-# Note that the module has to be registered on the network.
-comx module info vali::calc [--balance] 
+# Note that the agent has to be registered on the network.
+torus-cli agent info vali::calc [--balance]
 ```
 
-#### Retrieving Global Parameters
+### Retrieving Global Parameters
 
 ```sh
-comx network params
+torus-cli network params
 ```
 
-#### Retrieving Subnet Parameters
-
-```sh
-comx subnet list
-```
-
-#### Retrieving Circulating Supply
+### Retrieving Circulating Supply
 
 ```sh
 # Gets all tokens then were ever emitted minus burned tokens.
-comx misc circulating-supply 
+torus-cli misc circulating-supply
 ```
 
-### Completions
+## Completions
 
 You can enable completions for your shell by running:
 
 ```sh
 # On bash
-comx --install-completion bash
+torus-cli --install-completion bash
 # On zsh
-comx --install-completion zsh
+torus-cli --install-completion zsh
 ```
 
 ## Contributing
 
 Bug reports and pull requests and other forms of contribution are welcomed and
-encouraged!  :)
+encouraged! :)
 
 To report a bug or request a feature, please [open an issue on GitHub].
 
-If you have any questions, feel free to ask on the [CommuneX Discord channel] or
+If you have any questions, feel free to ask on the [CLI Discord channel] or
 post on our [GitHub discussions page].
 
 To contribute to the codebase, using Poetry you can install the development dependencies with:
@@ -172,20 +167,11 @@ To contribute to the codebase, using Poetry you can install the development depe
 poetry install --with dev
 ```
 
-it can [require some enviroment-specific binaries to be installed][ruff-installation]
-
-## Commune compatibility
-
-Yes, `torus` is compatible with the `commune` library/CLI. However, there are
-important considerations to note. `torus` verifies the integrity of your
-keys, which means that mixing certain types of keys is not permissible.
-Specifically, if you possess node keys or other similar types that are not
-designed to receive tokens, you to relocate them outside of the key
-directory.
+it can [require some environment-specific binaries to be installed][ruff-installation]
 
 ---
 
-[open an issue on GitHub]: https://github.com/agicommies/torus/issues/new/choose
-[CommuneX Discord channel]: https://go.agicommies.org/torus-channel
-[GitHub discussions page]: https://github.com/agicommies/torus/discussions
+[open an issue on GitHub]: https://github.com/renlabs-dev/torus-cli/issues/new/choose
+[torus-cli Discord channel]: https://go.renlabs-dev.org/torus-cli-channel
+[GitHub discussions page]: https://github.com/renlabs-dev/torus-cli/discussions
 [ruff-installation]: https://docs.astral.sh/ruff/installation/

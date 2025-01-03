@@ -1,3 +1,5 @@
+from typing import cast
+
 import typer
 from typer import Context
 
@@ -7,6 +9,7 @@ from torus.cli._common import make_custom_context, print_module_info
 from torus.client import TorusClient
 from torus.compat.key import local_key_addresses
 from torus.misc import get_map_modules
+from torus.types import Ss58Address
 
 misc_app = typer.Typer(no_args_is_help=True)
 
@@ -16,9 +19,11 @@ def circulating_tokens(c_client: TorusClient) -> int:
     Gets total circulating supply
     """
 
-    with c_client.get_conn(init=True) as substrate:
-        block_hash = substrate.get_block_hash()
-
+    # with c_client.get_conn(init=True) as substrate:
+    #     block_hash = substrate.get_block_hash()
+    # TODO: use pydantic models
+    block_hash = c_client.get_block()["header"]["hash"]  # type: ignore
+    block_hash = cast(Ss58Address, block_hash)
     total_balance = c_client.get_total_free_issuance(block_hash=block_hash)
     total_stake = c_client.get_total_stake(block_hash=block_hash)
     return total_stake + total_balance
@@ -50,7 +55,7 @@ def apr(ctx: Context, fee: int = 0):
     client = context.com_client()
 
     # adjusting the fee to the correct format
-    # the default validator fee on the commune network is 20%
+    # the default validator fee on the torus network is 20%
     fee_to_float = fee / 100
 
     # network parameters
@@ -72,16 +77,18 @@ def apr(ctx: Context, fee: int = 0):
     context.output(f"Fee {fee} | APR {_apr:.2f}%")
 
 
-@misc_app.command(name="stats")
+# TODO: REVIEW THIS
+@misc_app.command(name="stats", hidden=True)
 def stats(ctx: Context, balances: bool = False, netuid: int = 0):
+    raise NotImplementedError("Stat is going to be added soon")
     context = make_custom_context(ctx)
     client = context.com_client()
 
     with context.progress_status(
-        f"Getting Modules on a subnet with netuid {netuid}..."
+        f"Getting Agent on a subnet with netuid {netuid}..."
     ):
-        modules = get_map_modules(client, include_balances=balances)
-    modules_to_list = [value for _, value in modules.items()]
+        agents = get_map_modules(client, include_balances=balances)
+    modules_to_list = [value for _, value in agents.items()]
     local_keys = local_key_addresses(password_provider=context.password_manager)
     local_modules = [
         *filter(

@@ -1,12 +1,12 @@
-import re
 from typing import Optional
 
 import typer
 from typer import Context
 
-from torus._common import IPFS_REGEX, BalanceUnit, format_balance
+from torus._common import BalanceUnit, format_balance
 from torus.balance import to_nano
 from torus.cli._common import (
+    NOT_IMPLEMENTED_MESSAGE,
     make_custom_context,
     print_table_from_plain_dict,
 )
@@ -195,7 +195,7 @@ def stake(
         "By default you delegate DAO "
         "voting power to the validator you stake to. "
         "In case you want to change this, call: "
-        "`comx key power-delegation <key> --disable`."
+        "`torus-cli key power-delegation <key> --disable`."
     )
     context.info("INFO: ", style="bold green", end="")  # type: ignore
     context.info(delegating_message)  # type: ignore
@@ -225,7 +225,7 @@ def unstake(ctx: Context, key: str, amount: float, dest: str):
     with context.progress_status(f"Unstaking {amount} tokens from {dest}'..."):
         response = client.unstake(
             key=keypair, amount=nano_amount, dest=resolved_dest
-        )  # TODO: is it right?
+        )
 
     if response.is_success:
         context.info(f"Unstaked {amount} tokens from {dest}")
@@ -240,6 +240,7 @@ def run_faucet(
     num_processes: Optional[int] = None,
     num_executions: int = 1,
 ):
+    raise NotImplementedError("Faucet " + NOT_IMPLEMENTED_MESSAGE)
     context = make_custom_context(ctx)
     use_testnet = ctx.obj.use_testnet
 
@@ -272,28 +273,3 @@ def run_faucet(
                 module="FaucetModule",
                 key=resolved_key.ss58_address,  # type: ignore
             )
-
-
-@balance_app.command()
-def transfer_dao_funds(
-    ctx: Context,
-    signer_key: str,
-    amount: float,
-    cid_hash: str,
-    dest: str,
-):
-    context = make_custom_context(ctx)
-
-    if not re.match(IPFS_REGEX, cid_hash):
-        context.error(f"CID provided is invalid: {cid_hash}")
-        raise typer.Exit(code=1)
-
-    ipfs_prefix = "ipfs://"
-    cid = ipfs_prefix + cid_hash
-
-    nano_amount = to_nano(amount)
-    keypair = context.load_key(signer_key, None)
-    dest = context.resolve_key_ss58(dest, None)
-
-    client = context.com_client()
-    client.add_transfer_dao_treasury_proposal(keypair, cid, nano_amount, dest)

@@ -1,5 +1,5 @@
 {
-  description = "Alternative library/SDK to the original Commune AI";
+  description = "Torus official CLI / SDK";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-24.11";

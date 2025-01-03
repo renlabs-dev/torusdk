@@ -34,9 +34,9 @@ class ComxSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="COMX_")
     # TODO: improve node lists
     NODE_URLS: list[str] = [
-        "wss://api.communeai.net",
+        "wss://api.torus.network",
     ]
-    TESTNET_NODE_URLS: list[str] = ["wss://testnet.api.communeai.net"]
+    TESTNET_NODE_URLS: list[str] = ["wss://testnet.api.torus.network"]
     UNIVERSAL_PASSWORD: SecretStr | None = None
     KEY_PASSWORDS: dict[str, SecretStr] | None = None
 
@@ -84,7 +84,7 @@ def format_balance(balance: int, unit: BalanceUnit = BalanceUnit.nano) -> str:
         case BalanceUnit.joule | BalanceUnit.j:
             in_joules = from_nano(balance)
             round_joules = round(in_joules, 4)
-            return f"{round_joules:,} TOR"
+            return f"{round_joules:,} $TORUS"
 
 
 K = TypeVar("K")

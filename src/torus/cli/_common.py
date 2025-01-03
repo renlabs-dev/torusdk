@@ -20,7 +20,11 @@ from torus.errors import InvalidPasswordError, PasswordNotProvidedError
 from torus.types import (
     AgentInfoWithOptionalBalance,
     Ss58Address,
-    SubnetParamsWithEmission,
+)
+
+NOT_IMPLEMENTED_MESSAGE = (
+    "method not available. "
+    "It's going to be rolled out in the coming updates."
 )
 
 
@@ -263,13 +267,13 @@ def render_pydantic_table(
     table = Table(title=title, show_header=True, header_style="bold magenta")
 
     # Add columns to the table based on the Pydantic model fields
-    for field_name, field in objects[0].model_fields.items():
+    for field_name, _ in objects[0].model_fields.items():
         table.add_column(field_name, style="white", vertical="middle")
 
     # Add rows to the table from Pydantic objects
     for obj in objects:
         row_data: list[str | Table] = []
-        for field_name, field in obj.model_fields.items():
+        for field_name, _ in obj.model_fields.items():
             value = getattr(obj, field_name)
             if isinstance(value, BaseModel):
                 subtable = Table(
@@ -277,7 +281,7 @@ def render_pydantic_table(
                     padding=(0, 0, 0, 0),
                     border_style="bright_black",
                 )
-                for subfield_name, subfield in value.model_fields.items():
+                for subfield_name, _ in value.model_fields.items():
                     subfield_value = getattr(value, subfield_name)
                     subtable.add_row(f"{subfield_name}: {subfield_value}")
                 row_data.append(subtable)
@@ -311,9 +315,9 @@ def transform_module_into(
     to_exclude: list[str],
     last_block: int,
     immunity_period: int,
-    modules: list[AgentInfoWithOptionalBalance],
+    agents: list[AgentInfoWithOptionalBalance],
 ):
-    mods = cast(list[dict[str, Any]], modules)
+    mods = cast(list[dict[str, Any]], agents)
     transformed_modules: list[dict[str, Any]] = []
     for mod in mods:
         module = mod.copy()
@@ -335,15 +339,14 @@ def transform_module_into(
 
 def print_module_info(
     client: TorusClient,
-    modules: list[AgentInfoWithOptionalBalance],
+    agents: list[AgentInfoWithOptionalBalance],
     console: Console,
-    netuid: int,
     title: str | None = None,
 ) -> None:
     """
     Prints information about a module.
     """
-    if not modules:
+    if not agents:
         return
 
     # Get the current block number, we will need this to caluclate immunity period
@@ -369,7 +372,7 @@ def print_module_info(
 
     to_exclude = ["stake_from", "regblock"]
     tranformed_modules = transform_module_into(
-        to_exclude, last_block, immunity_period, modules
+        to_exclude, last_block, immunity_period, agents
     )
 
     sample_mod = tranformed_modules[0]
@@ -417,42 +420,3 @@ def tranform_network_params(params: dict[str, Any]):
     )
 
     return general_params
-
-
-T = TypeVar("T")
-V = TypeVar("V")
-
-
-def remove_none_values(data: dict[T, V | None]) -> dict[T, V]:
-    """
-    Removes key-value pairs from a dictionary where the value is None.
-    Works recursively for nested dictionaries.
-    """
-    cleaned_data: dict[T, V] = {}
-    for key, value in data.items():
-        if isinstance(value, dict):
-            cleaned_value = remove_none_values(value)  # type: ignore
-            if cleaned_value is not None:  # type: ignore
-                cleaned_data[key] = cleaned_value
-        elif value is not None:
-            cleaned_data[key] = value
-    return cleaned_data
-
-
-def transform_subnet_params(params: dict[int, SubnetParamsWithEmission]):
-    """Transform subnet params to be human readable."""
-    params_ = cast(dict[int, Any], params)
-    display_params = remove_none_values(params_)
-    display_params = dict_from_nano(
-        display_params,
-        [
-            "bonds_ma",
-            "min_burn",
-            "max_burn",
-            "min_weight_stake",
-            "proposal_cost",
-            "max_proposal_reward_treasury_allocation",
-            "min_validator_stake",
-        ],
-    )
-    return display_params

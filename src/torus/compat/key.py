@@ -169,21 +169,6 @@ def try_classic_load_key(
     return keypair
 
 
-def try_load_key(name: str, password: str | None = None):
-    """
-    DEPRECATED
-    """
-    raise DeprecationWarning("Use try_classic_load_key instead")
-    # try:
-    #     key_dict = classic_load(name, password=password)
-    # except json.JSONDecodeError:
-    #     prompt = f"Please provide the password for the key {name}"
-    #     print(prompt)
-    #     password = getpass()
-    #     key_dict = classic_load(name, password=password)
-    # return key_dict
-
-
 def is_encrypted(name: str) -> bool:
     """
     Checks if the key with the given name is encrypted.

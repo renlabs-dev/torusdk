@@ -21,7 +21,7 @@ def get_map_modules(
     include_balances: bool = False,
 ) -> dict[str, AgentInfoWithOptionalBalance]:
     """
-    Gets all modules info on the network
+    Gets all agents info on the network
     """
     request_dict: dict[Any, Any] = {
         "Torus0": [
@@ -47,7 +47,7 @@ def get_map_modules(
         ss58: Agent.model_validate(agent)
         for ss58, agent in ss58_to_agents.items()
     }
-    result_modules: dict[str, AgentInfoWithOptionalBalance] = {}
+    result_agents: dict[str, AgentInfoWithOptionalBalance] = {}
     ss58_to_stakeby = transform_stake_dmap(ss58_to_stakeby)
     for ss58 in ss58_to_agents.keys():
         key = check_ss58_address(ss58)
@@ -67,7 +67,7 @@ def get_map_modules(
                 balance = 0
         stake = sum(stake for _, stake in stake_from)
 
-        module: AgentInfoWithOptionalBalance = {
+        agent: AgentInfoWithOptionalBalance = {
             "key": key,
             "name": name,
             "url": url,
@@ -80,8 +80,8 @@ def get_map_modules(
             "weight_control_fee": ss58_to_agents[ss58].fees.weight_control_fee,
         }
 
-        result_modules[key] = module
-    return result_modules
+        result_agents[key] = agent
+    return result_agents
 
 
 def to_snake_case(d: dict[str, T]) -> dict[str, T]:
@@ -123,9 +123,6 @@ def get_global_params(c_client: TorusClient):
             ],
             "Emission0": [
                 ("MaxAllowedWeights", []),
-                # ("MinWeightControlFee", []),
-                # ("MinWeightStake", []),
-                # ("MinStakingFee", []),
             ],
         }
     )

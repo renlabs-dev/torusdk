@@ -1,10 +1,10 @@
 """
-The CommuneX library package.
+The Torus CLI library package.
 
 Submodules:
-    * `torus.client`: A lightweigh yet faster client for the Commune network.
+    * `torus.client`: A lightweigh yet faster client for the Torus Network.
     * `.compat`: Compatibility layer for the *classic* `commune` library.
-    * `.types`: CommuneX common types.
+    * `.types`: Torus common types.
     * `.key`: Key related functions.
 
 .. include:: ../../README.md

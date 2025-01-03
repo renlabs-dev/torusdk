@@ -1,26 +1,15 @@
-import re
-from typing import Optional
-
 import typer
-from rich.progress import track
 from typer import Context
 
 import torus.balance as c_balance
-from torus._common import IPFS_REGEX
 from torus.cli._common import (
-    CustomCtx,
     make_custom_context,
     print_table_from_plain_dict,
     tranform_network_params,
 )
-from torus.client import TorusClient
-from torus.compat.key import local_key_addresses
 from torus.misc import (
     get_global_params,
-    local_keys_to_stakedbalance,
 )
-from torus.types import NetworkParams
-from torus.util import convert_cid_on_proposal
 
 network_app = typer.Typer(no_args_is_help=True)
 
@@ -60,164 +49,12 @@ def params(ctx: Context):
 
 
 @network_app.command()
-def list_proposals(ctx: Context, query_cid: bool = typer.Option(True)):
-    """
-    Gets proposals
-    """
-    context = make_custom_context(ctx)
-    client = context.com_client()
-
-    with context.progress_status("Getting proposals..."):
-        try:
-            proposals = client.query_map_proposals()
-            if query_cid:
-                proposals = convert_cid_on_proposal(proposals)
-        except IndexError:
-            context.info("No proposals found.")
-            return
-
-    for proposal_id, batch_proposal in proposals.items():
-        status = batch_proposal["status"]
-        if isinstance(status, dict):
-            batch_proposal["status"] = [*status.keys()][0]
-        print_table_from_plain_dict(
-            batch_proposal,
-            [f"Proposal id: {proposal_id}", "Params"],
-            context.console,
-        )
-
-
-@network_app.command()
-def propose_globally(
-    ctx: Context,
-    key: str,
-    cid: str,
-    max_name_length: int = typer.Option(None),
-    min_name_length: int = typer.Option(None),
-    max_allowed_agents: int = typer.Option(None),
-    max_allowed_weights: int = typer.Option(None),
-    min_weight_stake: int = typer.Option(None),
-    min_weight_control_fee: int = typer.Option(None),
-    min_staking_fee: int = typer.Option(None),
-    dividends_participation_weight: int = typer.Option(None),
-):
-    provided_params = locals().copy()
-    provided_params.pop("ctx")
-    provided_params.pop("key")
-
-    provided_params = {
-        key: value
-        for key, value in provided_params.items()
-        if value is not None
-    }
-    """
-    Adds a global proposal to the network.
-    """
-    context = make_custom_context(ctx)
-    client = context.com_client()
-
-    resolved_key = context.load_key(key, None)
-
-    global_params = get_global_params(client)
-    global_params.update(provided_params)
-
-    global_params = NetworkParams(**global_params)
-    if not re.match(IPFS_REGEX, cid):
-        context.error(f"CID provided is invalid: {cid}")
-        typer.Exit(code=1)
-    with context.progress_status("Adding a proposal..."):
-        client.add_global_proposal(resolved_key, global_params, cid)
-    context.info("Proposal added.")
-
-
-def get_valid_voting_keys(
-    ctx: CustomCtx,
-    client: TorusClient,
-    threshold: int = 25000000000,  # 25 $TOR
-) -> dict[str, int]:
-    local_keys = local_key_addresses(password_provider=ctx.password_manager)
-    keys_stake = local_keys_to_stakedbalance(client, local_keys)
-    keys_stake = {
-        key: stake for key, stake in keys_stake.items() if stake >= threshold
-    }
-    return keys_stake
-
-
-@network_app.command()
-def vote_proposal(
-    ctx: Context,
-    proposal_id: int,
-    key: Optional[str] = None,
-    agree: bool = typer.Option(True, "--disagree"),
-):
-    """
-    Casts a vote on a specified proposal. Without specifying a key, all keys on disk will be used.
-    """
-    context = make_custom_context(ctx)
-    client = context.com_client()
-
-    if key is None:
-        context.info("Voting with all keys on disk...")
-        delegators = client.get_power_users()
-        keys_stake = get_valid_voting_keys(context, client)
-        keys_stake = {
-            key: stake
-            for key, stake in keys_stake.items()
-            if key not in delegators
-        }
-    else:
-        keys_stake = {key: None}
-
-    for voting_key in track(keys_stake.keys(), description="Voting..."):
-        keypair = context.load_key(voting_key, None)
-        try:
-            client.vote_on_proposal(keypair, proposal_id, agree)
-        except Exception as e:
-            print(f"Error while voting with key {key}: ", e)
-            print("Skipping...")
-            continue
-
-
-@network_app.command()
-def unvote_proposal(ctx: Context, key: str, proposal_id: int):
-    """
-    Retracts a previously cast vote on a specified proposal.
-    """
-    context = make_custom_context(ctx)
-    client = context.com_client()
-
-    resolved_key = context.load_key(key, None)
-    with context.progress_status(f"Unvoting on a proposal {proposal_id}..."):
-        client.unvote_on_proposal(resolved_key, proposal_id)
-
-
-@network_app.command()
-def add_custom_proposal(ctx: Context, key: str, cid: str):
-    """
-    Adds a custom proposal.
-    """
-    context = make_custom_context(ctx)
-    if not re.match(IPFS_REGEX, cid):
-        context.error(f"CID provided is invalid: {cid}")
-        exit(1)
-    else:
-        ipfs_prefix = "ipfs://"
-        cid = ipfs_prefix + cid
-    client = context.com_client()
-
-    resolved_key = context.load_key(key, None)
-
-    with context.progress_status("Adding a proposal..."):
-        client.add_custom_proposal(resolved_key, cid)
-
-
-@network_app.command()
 def registration_burn(
     ctx: Context,
     netuid: int,
 ):
     """
-    Appraises the cost of registering a module on the Commune network.
+    Appraises the cost of registering a agent on the torus network.
     """
 
     context = make_custom_context(ctx)
@@ -226,5 +63,5 @@ def registration_burn(
     burn = client.get_burn()
     registration_cost = c_balance.from_nano(burn)
     context.info(
-        f"The cost to register on a netuid: {netuid} is: {registration_cost} $TOR"
+        f"The cost to register on a netuid: {netuid} is: {registration_cost} $TORUS"
     )
