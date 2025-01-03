@@ -1,7 +1,7 @@
 from typing import Any, TypeVar
 
 DECIMALS = 18
-UNIT_NAME = "Rems"
+UNIT_NAME = "Toids"
 
 
 def from_nano(amount: int) -> float:
