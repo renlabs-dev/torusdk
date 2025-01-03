@@ -7,6 +7,7 @@ from torusdk import __version__
 from ._common import ExtraCtxData
 from .agent import agent_app
 from .balance import balance_app
+from .curator import curator_app
 from .key import key_app
 from .misc import misc_app
 from .network import network_app
@@ -20,6 +21,7 @@ app.add_typer(misc_app, name="misc", help="Other operations")
 app.add_typer(agent_app, name="agent", help="Agent operations")
 app.add_typer(network_app, name="network", help="Network operations")
 app.add_typer(proposal_app, name="proposal", help="Proposal operations")
+app.add_typer(curator_app, name="curator", help="Curator operations")
 
 
 def _version_callback(value: bool):
