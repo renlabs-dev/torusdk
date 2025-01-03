@@ -3,8 +3,8 @@ from typing import TypeGuard
 from torustrateinterface import Keypair
 from torustrateinterface.utils import ss58
 
-from torus._common import SS58_FORMAT
-from torus.types import Ss58Address
+from torusdk._common import SS58_FORMAT
+from torusdk.types import Ss58Address
 
 
 def is_ss58_address(

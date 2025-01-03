@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "torus"
+name = "torusdk"
 version = "0.2"
 description = "Torus network official CLI"
 authors = ["renlabs <info@agicommies.org>"]
@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.scripts]
-torus-cli = "torus.cli:app"
+torus-cli = "torusdk.cli:app"
 
 # configure autopep to not format type ignores !!!
 [tool.autopep8]

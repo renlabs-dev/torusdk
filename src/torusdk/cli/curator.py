@@ -1,7 +1,7 @@
 import typer
 from typer import Context
 
-from torus.cli._common import (
+from torusdk.cli._common import (
     make_custom_context,
 )
 

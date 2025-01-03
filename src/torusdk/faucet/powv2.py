@@ -16,8 +16,8 @@ from typing import Generic, Optional, TypeVar, cast
 from Crypto.Hash import keccak
 from torustrateinterface import Keypair
 
-from torus.client import TorusClient
-from torus.util.mutex import MutexBox
+from torusdk.client import TorusClient
+from torusdk.util.mutex import MutexBox
 
 SEAL_LIMIT = 2**256 - 1  # U256_MAX
 DIFFICULTY = 1_000_000
@@ -566,8 +566,8 @@ def solve_for_difficulty_fast(
 if __name__ == "__main__":
     import time
 
-    from torus._common import get_node_url
-    from torus.compat.key import classic_load_key
+    from torusdk._common import get_node_url
+    from torusdk.compat.key import classic_load_key
 
     node = get_node_url(use_testnet=True)
     print(node)

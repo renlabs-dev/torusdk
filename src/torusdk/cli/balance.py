@@ -3,15 +3,15 @@ from typing import Optional
 import typer
 from typer import Context
 
-from torus._common import BalanceUnit, format_balance
-from torus.balance import to_nano
-from torus.cli._common import (
+from torusdk._common import BalanceUnit, format_balance
+from torusdk.balance import to_nano
+from torusdk.cli._common import (
     NOT_IMPLEMENTED_MESSAGE,
     make_custom_context,
     print_table_from_plain_dict,
 )
-from torus.errors import ChainTransactionError
-from torus.faucet.powv2 import solve_for_difficulty_fast
+from torusdk.errors import ChainTransactionError
+from torusdk.faucet.powv2 import solve_for_difficulty_fast
 
 balance_app = typer.Typer(no_args_is_help=True)
 

@@ -3,13 +3,13 @@ from typing import cast
 import typer
 from typer import Context
 
-from torus._common import BalanceUnit, format_balance
-from torus.balance import from_nano
-from torus.cli._common import make_custom_context, print_module_info
-from torus.client import TorusClient
-from torus.compat.key import local_key_addresses
-from torus.misc import get_map_modules
-from torus.types import Ss58Address
+from torusdk._common import BalanceUnit, format_balance
+from torusdk.balance import from_nano
+from torusdk.cli._common import make_custom_context, print_module_info
+from torusdk.client import TorusClient
+from torusdk.compat.key import local_key_addresses
+from torusdk.misc import get_map_modules
+from torusdk.types import Ss58Address
 
 misc_app = typer.Typer(no_args_is_help=True)
 

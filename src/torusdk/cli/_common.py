@@ -12,12 +12,12 @@ from rich.table import Table
 from torustrateinterface import Keypair
 from typer import Context
 
-from torus._common import ComxSettings, get_node_url
-from torus.balance import dict_from_nano, from_nano
-from torus.client import TorusClient
-from torus.compat.key import resolve_key_ss58_encrypted, try_classic_load_key
-from torus.errors import InvalidPasswordError, PasswordNotProvidedError
-from torus.types import (
+from torusdk._common import ComxSettings, get_node_url
+from torusdk.balance import dict_from_nano, from_nano
+from torusdk.client import TorusClient
+from torusdk.compat.key import resolve_key_ss58_encrypted, try_classic_load_key
+from torusdk.errors import InvalidPasswordError, PasswordNotProvidedError
+from torusdk.types import (
     AgentInfoWithOptionalBalance,
     Ss58Address,
 )

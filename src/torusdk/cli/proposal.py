@@ -5,19 +5,19 @@ import typer
 from rich.progress import track
 from typer import Context
 
-from torus._common import IPFS_REGEX
-from torus.balance import to_nano
-from torus.cli._common import (
+from torusdk._common import IPFS_REGEX
+from torusdk.balance import to_nano
+from torusdk.cli._common import (
     CustomCtx,
     make_custom_context,
     print_table_from_plain_dict,
 )
-from torus.client import TorusClient
-from torus.compat.key import local_key_addresses
-from torus.misc import (
+from torusdk.client import TorusClient
+from torusdk.compat.key import local_key_addresses
+from torusdk.misc import (
     local_keys_to_stakedbalance,
 )
-from torus.util import convert_cid_on_proposal
+from torusdk.util import convert_cid_on_proposal
 
 proposal_app = typer.Typer(no_args_is_help=True)
 
@@ -29,7 +29,9 @@ def get_valid_voting_keys(
 ) -> dict[str, int]:
     local_keys = local_key_addresses(password_provider=ctx.password_manager)
     keys_stake = local_keys_to_stakedbalance(client, local_keys)
-    keys_stake = {key: stake for key, stake in keys_stake.items() if stake >= threshold}
+    keys_stake = {
+        key: stake for key, stake in keys_stake.items() if stake >= threshold
+    }
     return keys_stake
 
 
@@ -50,7 +52,11 @@ def vote_proposal(
         context.info("Voting with all keys on disk...")
         delegators = client.get_power_users()
         keys_stake = get_valid_voting_keys(context, client)
-        keys_stake = {key: stake for key, stake in keys_stake.items() if key not in delegators}
+        keys_stake = {
+            key: stake
+            for key, stake in keys_stake.items()
+            if key not in delegators
+        }
     else:
         keys_stake = {key: None}
 

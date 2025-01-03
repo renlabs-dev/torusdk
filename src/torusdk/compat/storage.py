@@ -14,8 +14,8 @@ from typing import Any
 from nacl.secret import SecretBox
 from nacl.utils import random
 
-from torus.errors import PasswordNotProvidedError
-from torus.util import ensure_parent_dir_exists
+from torusdk.errors import PasswordNotProvidedError
+from torusdk.util import ensure_parent_dir_exists
 
 # from cryptography.fernet import Fernet
 # from cryptography.hazmat.primitives import hashes

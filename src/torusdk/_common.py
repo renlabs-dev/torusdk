@@ -8,8 +8,8 @@ from typing import Any, Callable, Mapping, TypeVar
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from torus.balance import from_nano
-from torus.types import Ss58Address
+from torusdk.balance import from_nano
+from torusdk.types import Ss58Address
 
 IPFS_REGEX = re.compile(r"^Qm[1-9A-HJ-NP-Za-km-z]{44}$")
 SS58_FORMAT = 42

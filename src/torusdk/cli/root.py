@@ -2,7 +2,7 @@ from typing import Annotated, Optional
 
 import typer
 
-from torus import __version__
+from torusdk import __version__
 
 from ._common import ExtraCtxData
 from .agent import agent_app

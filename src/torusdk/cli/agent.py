@@ -3,16 +3,16 @@ from typing import Any, Optional, cast
 import typer
 from typer import Context
 
-from torus._common import intersection_update
-from torus.balance import from_nano
-from torus.cli._common import (
+from torusdk._common import intersection_update
+from torusdk.balance import from_nano
+from torusdk.cli._common import (
     make_custom_context,
     print_module_info,
     print_table_from_plain_dict,
     render_pydantic_table,
 )
-from torus.errors import ChainTransactionError
-from torus.misc import get_governance_config, get_map_modules
+from torusdk.errors import ChainTransactionError
+from torusdk.misc import get_governance_config, get_map_modules
 
 agent_app = typer.Typer(no_args_is_help=True)
 

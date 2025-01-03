@@ -14,10 +14,10 @@ import websocket
 from torustrateinterface import ExtrinsicReceipt, Keypair, SubstrateInterface
 from torustrateinterface.storage import StorageKey
 
-from torus._common import transform_stake_dmap
-from torus.encryption import bytes_from_hex, encrypt_weights
-from torus.errors import ChainTransactionError, NetworkQueryError
-from torus.types import (
+from torusdk._common import transform_stake_dmap
+from torusdk.encryption import bytes_from_hex, encrypt_weights
+from torusdk.errors import ChainTransactionError, NetworkQueryError
+from torusdk.types import (
     Agent,
     AgentApplication,
     NetworkParams,
@@ -3440,8 +3440,8 @@ class TorusClient:
 if __name__ == "__main__":
     from time import sleep
 
-    from torus._common import get_node_url
-    from torus.compat.key import try_classic_load_key
+    from torusdk._common import get_node_url
+    from torusdk.compat.key import try_classic_load_key
 
     kp = try_classic_load_key("testkey")
     node = get_node_url(use_testnet=True)

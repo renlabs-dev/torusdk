@@ -12,17 +12,17 @@ from typing import Any, cast
 from nacl.exceptions import CryptoError
 from torustrateinterface import Keypair
 
-from torus.compat.storage import COMMUNE_HOME, classic_load, classic_put
-from torus.compat.types import CommuneKeyDict
-from torus.errors import (
+from torusdk.compat.storage import COMMUNE_HOME, classic_load, classic_put
+from torusdk.compat.types import CommuneKeyDict
+from torusdk.errors import (
     InvalidPasswordError,
     KeyNotFoundError,
     PasswordNotProvidedError,
 )
-from torus.key import check_ss58_address, is_ss58_address
-from torus.password import NoPassword, PasswordProvider
-from torus.types import Ss58Address
-from torus.util import bytes_to_hex, check_str
+from torusdk.key import check_ss58_address, is_ss58_address
+from torusdk.password import NoPassword, PasswordProvider
+from torusdk.types import Ss58Address
+from torusdk.util import bytes_to_hex, check_str
 
 
 def check_key_dict(key_dict: Any) -> CommuneKeyDict:

@@ -1,10 +1,10 @@
 import re
 from typing import Any, TypeVar
 
-from torus._common import transform_stake_dmap
-from torus.client import TorusClient
-from torus.key import check_ss58_address
-from torus.types import (
+from torusdk._common import transform_stake_dmap
+from torusdk.client import TorusClient
+from torusdk.key import check_ss58_address
+from torusdk.types import (
     Agent,
     AgentInfoWithOptionalBalance,
     GovernanceConfiguration,
@@ -262,7 +262,7 @@ def local_keys_allbalance(
 
 
 if __name__ == "__main__":
-    from torus._common import get_node_url
+    from torusdk._common import get_node_url
 
     client = TorusClient(get_node_url(use_testnet=True))
     get_global_params(client)

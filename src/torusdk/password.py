@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from torus.errors import PasswordNotProvidedError
+from torusdk.errors import PasswordNotProvidedError
 
 
 class PasswordProvider(Protocol):

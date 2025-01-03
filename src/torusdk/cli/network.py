@@ -1,13 +1,13 @@
 import typer
 from typer import Context
 
-import torus.balance as c_balance
-from torus.cli._common import (
+import torusdk.balance as c_balance
+from torusdk.cli._common import (
     make_custom_context,
     print_table_from_plain_dict,
     tranform_network_params,
 )
-from torus.misc import (
+from torusdk.misc import (
     get_global_params,
 )
 

@@ -7,19 +7,19 @@ from torustrateinterface import Keypair
 from typeguard import check_type
 from typer import Context
 
-import torus.compat.key as comx_key
-from torus._common import SS58_FORMAT, BalanceUnit, format_balance
-from torus.cli._common import (
+import torusdk.compat.key as comx_key
+from torusdk._common import SS58_FORMAT, BalanceUnit, format_balance
+from torusdk.cli._common import (
     make_custom_context,
     print_table_from_plain_dict,
     print_table_standardize,
 )
-from torus.compat.key import (
+from torusdk.compat.key import (
     classic_store_key,
     local_key_addresses,
 )
-from torus.key import check_ss58_address, generate_keypair, is_ss58_address
-from torus.misc import (
+from torusdk.key import check_ss58_address, generate_keypair, is_ss58_address
+from torusdk.misc import (
     local_keys_allbalance,
     local_keys_to_freebalance,
     local_keys_to_stakedbalance,
