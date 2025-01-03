@@ -1,6 +1,10 @@
 # Changelog
 
+## 0.2.3
+- Fixed default testnet node url
+
 ## 0.2.2
 - Changed unit name
+
 ## 0.2.1
 - Ported to Torus network

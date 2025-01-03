@@ -36,7 +36,7 @@ class ComxSettings(BaseSettings):
     NODE_URLS: list[str] = [
         "wss://api.torus.network",
     ]
-    TESTNET_NODE_URLS: list[str] = ["wss://testnet.api.torus.network"]
+    TESTNET_NODE_URLS: list[str] = ["wss://api.testnet.torus.network"]
     UNIVERSAL_PASSWORD: SecretStr | None = None
     KEY_PASSWORDS: dict[str, SecretStr] | None = None
 
