@@ -43,6 +43,11 @@ class Fee(BaseModel):
     weight_control_fee: int
 
 
+class MinFee(BaseModel):
+    min_staking_fee: int
+    min_weight_control_fee: int
+
+
 class Agent(BaseModel):
     key: Ss58Address
     name: str
@@ -53,7 +58,18 @@ class Agent(BaseModel):
     fees: Fee
 
 
-class DisplayGovernanceConfiguration(TypedDict):
+class AgentApplication(BaseModel):
+    id: int
+    payer_key: Ss58Address
+    agent_key: Ss58Address
+    data: str
+    cost: int
+    expires_at: int
+    action: str
+    status: str | dict[str, dict[str, bool]]
+
+
+class DisplayGovernanceConfiguration(BaseModel):
     proposal_cost: float
     proposal_expiration: float
     vote_mode: VoteMode
@@ -62,22 +78,24 @@ class DisplayGovernanceConfiguration(TypedDict):
     proposal_reward_interval: int
 
 
-class GovernanceConfiguration(TypedDict):
+class GovernanceConfiguration(BaseModel):
     proposal_cost: int
     proposal_expiration: int
-    vote_mode: int  # 0: Authority, 1: Vote
-    proposal_reward_treasury_allocation: float
+    agent_application_cost: int
+    agent_application_expiration: int
+    proposal_reward_treasury_allocation: int
     max_proposal_reward_treasury_allocation: int
     proposal_reward_interval: int
 
 
-class DisplayBurnConfiguration(TypedDict):
-    min_burn: float
-    max_burn: float
-    adjustment_alpha: int
-    target_registrations_interval: int
-    target_registrations_per_interval: int
-    max_registrations_per_interval: int
+class DisplayBurnConfiguration(BaseModel):
+    proposal_cost: float
+    proposal_expiration: float
+    agent_application_cost: float
+    agent_application_expiration: float
+    proposal_reward_treasury_allocation: float
+    max_proposal_reward_treasury_allocation: float
+    proposal_reward_interval: float
 
 
 class BurnConfiguration(TypedDict):
@@ -89,32 +107,34 @@ class BurnConfiguration(TypedDict):
     max_registrations_per_interval: int
 
 
-class NetworkParams(TypedDict):
+# class NetworkParams(TypedDict):
+#     # max
+#     max_name_length: int
+#     min_name_length: int  # dont change the position
+#     max_allowed_agents: int
+#     max_allowed_weights: int
+
+#     # mins
+#     min_weight_stake: int
+#     min_weight_control_fee: int
+#     min_staking_fee: int
+
+#     dividends_participation_weight: int
+
+
+class NetworkParams(BaseModel):
     # max
     max_name_length: int
     min_name_length: int  # dont change the position
-    max_allowed_subnets: int
-    max_allowed_modules: int
-    max_registrations_per_block: int
+    max_allowed_agents: int
     max_allowed_weights: int
 
     # mins
-    floor_delegation_fee: int
-    floor_founder_share: int
     min_weight_stake: int
+    min_weight_control_fee: int
+    min_staking_fee: int
 
-    # S0 governance
-    curator: Ss58Address
-    general_subnet_application_cost: int
-
-    # Other
-    subnet_immunity_period: int
-    governance_config: GovernanceConfiguration
-
-    kappa: int
-    rho: int
-
-    subnet_registration_cost: int
+    dividends_participation_weight: int
 
 
 class SubnetParamsMaps(TypedDict):

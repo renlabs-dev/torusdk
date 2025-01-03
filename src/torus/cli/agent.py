@@ -1,24 +1,19 @@
-import importlib.util
 from typing import Any, Optional, cast
 
 import typer
-import uvicorn
 from typer import Context
 
 from torus._common import intersection_update
+from torus.balance import from_nano
 from torus.cli._common import (
     make_custom_context,
     print_module_info,
     print_table_from_plain_dict,
+    render_pydantic_table,
 )
 from torus.errors import ChainTransactionError
 from torus.key import check_ss58_address
-from torus.misc import get_map_modules
-from torus.module._rate_limiters.limiters import (
-    IpLimiterParams,
-    StakeLimiterParams,
-)
-from torus.module.server import ModuleServer
+from torus.misc import get_governance_config, get_map_modules
 from torus.types import Ss58Address
 
 module_app = typer.Typer(no_args_is_help=True)
@@ -87,6 +82,73 @@ def add_to_whitelist(ctx: Context, curator_key: str, agent_key: str):
             curator_key=resolved_curator_key, agent_key=resolved_module_key
         )
     context.info(f"Module {agent_key} added to whitelist")
+
+
+@module_app.command()
+def list_applications(ctx: Context):
+    """
+    Lists all registered applications.
+    """
+    context = make_custom_context(ctx)
+    client = context.com_client()
+
+    with context.progress_status("Getting applications..."):
+        applications = client.query_map_applications()
+    render_pydantic_table(
+        [*applications.values()], context.console, title="Applications"
+    )
+
+
+@module_app.command()
+def add_application(
+    ctx: Context,
+    payer_key: str,
+    application_key: str,
+    data: str,
+    removing: bool = False,
+):
+    """
+    Adds an application to a module.
+    """
+    context = make_custom_context(ctx)
+    client = context.com_client()
+
+    resolved_key = context.load_key(payer_key, None)
+    application_addr = context.resolve_key_ss58(application_key, None)
+    application_burn = get_governance_config(client).agent_application_cost
+    confirm = context.confirm(
+        f"{from_nano(application_burn)} tokens will be burned. Do you want to continue?"
+    )
+    if not confirm:
+        context.info("Application addition cancelled")
+        return
+    with context.progress_status(f"Adding application {application_key}..."):
+        client.add_application(
+            key=resolved_key,
+            application_key=application_addr,
+            data=data,
+            removing=removing,
+        )
+    context.info("Application added.")
+
+
+@module_app.command()
+def accept_application(
+    ctx: Context,
+    curator_key: str,
+    application_id: int,
+):
+    """
+    Accepts an application.
+    """
+    context = make_custom_context(ctx)
+    client = context.com_client()
+
+    resolved_curator_key = context.load_key(curator_key, None)
+
+    with context.progress_status("Accepting application..."):
+        client.accept_application(resolved_curator_key, application_id)
+    context.info("Application accepted.")
 
 
 @module_app.command()
@@ -170,104 +232,6 @@ def update(
         context.info(f"Module {key} updated")
     else:
         raise ChainTransactionError(response.error_message)  # type: ignore
-
-
-@module_app.command()
-def serve(
-    ctx: typer.Context,
-    class_path: str,
-    key: str,
-    port: int = 8000,
-    ip: Optional[str] = None,
-    whitelist: Optional[list[str]] = None,
-    blacklist: Optional[list[str]] = None,
-    ip_blacklist: Optional[list[str]] = None,
-    test_mode: Optional[bool] = False,
-    request_staleness: int = typer.Option(120),
-    use_ip_limiter: Optional[bool] = typer.Option(
-        False, help=("If this value is passed, the ip limiter will be used")
-    ),
-    token_refill_rate_base_multiplier: Optional[int] = typer.Option(
-        None,
-        help=(
-            "Multiply the base limit per stake. Only used in stake limiter mode."
-        ),
-    ),
-):
-    """
-    Serves a module on `127.0.0.1` on port `port`. `class_path` should specify
-    the dotted path to the module class e.g. `module.submodule.ClassName`.
-    """
-    context = make_custom_context(ctx)
-    use_testnet = context.get_use_testnet()
-    path_parts = class_path.split(".")
-    match path_parts:
-        case [*module_parts, class_name]:
-            module_path = ".".join(module_parts)
-            if not module_path:
-                # This could do some kind of relative import somehow?
-                raise ValueError(
-                    f"Invalid class path: `{class_path}`, module name is missing"
-                )
-            if not class_name:
-                raise ValueError(
-                    f"Invalid class path: `{class_path}`, class name is missing"
-                )
-        case _:
-            # This is impossible
-            raise Exception(f"Invalid class path: `{class_path}`")
-
-    try:
-        module = importlib.import_module(module_path)
-    except ModuleNotFoundError:
-        context.error(f"Module `{module_path}` not found")
-        raise typer.Exit(code=1)
-
-    try:
-        class_obj = getattr(module, class_name)
-    except AttributeError:
-        context.error(f"Class `{class_name}` not found in module `{module}`")
-        raise typer.Exit(code=1)
-
-    keypair = context.load_key(key, None)
-
-    token_refill_rate = token_refill_rate_base_multiplier or 1
-    limiter_params = (
-        IpLimiterParams()
-        if use_ip_limiter
-        else StakeLimiterParams(token_ratio=token_refill_rate)
-    )
-
-    if whitelist is None:
-        context.info(
-            "WARNING: No whitelist provided, will accept calls from any key"
-        )
-
-    try:
-        whitelist_ss58 = list_to_ss58(whitelist)
-    except AssertionError:
-        context.error("Invalid SS58 address passed to whitelist")
-        exit(1)
-    try:
-        blacklist_ss58 = list_to_ss58(blacklist)
-    except AssertionError:
-        context.error("Invalid SS58 address passed on blacklist")
-        exit(1)
-    cast(list[Ss58Address] | None, whitelist)
-
-    server = ModuleServer(
-        class_obj(),
-        keypair,
-        whitelist=whitelist_ss58,
-        blacklist=blacklist_ss58,
-        max_request_staleness=request_staleness,
-        limiter=limiter_params,
-        ip_blacklist=ip_blacklist,
-        use_testnet=use_testnet,
-    )
-    app = server.get_fastapi_app()
-    host = ip or "127.0.0.1"
-    uvicorn.run(app, host=host, port=port)  # type: ignore
 
 
 @module_app.command()

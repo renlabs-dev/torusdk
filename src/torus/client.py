@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 from time import sleep
-from typing import Any, Mapping, TypeVar, cast
+from typing import Any, Mapping, TypeVar
 
 import websocket
 from torustrateinterface import ExtrinsicReceipt, Keypair, SubstrateInterface
@@ -17,7 +17,13 @@ from torustrateinterface.storage import StorageKey
 from torus._common import transform_stake_dmap
 from torus.encryption import bytes_from_hex, encrypt_weights
 from torus.errors import ChainTransactionError, NetworkQueryError
-from torus.types import Agent, NetworkParams, Ss58Address, SubnetParams
+from torus.types import (
+    Agent,
+    AgentApplication,
+    NetworkParams,
+    Ss58Address,
+    SubnetParams,
+)
 
 # TODO: InsufficientBalanceError, MismatchedLengthError etc
 
@@ -1182,7 +1188,6 @@ class TorusClient:
             "staking_fee": staking_fee,
             "weight_control_fee": weight_control_fee,
         }
-        print(params)
 
         response = self.compose_call("update_agent", params=params, key=key)
 
@@ -1278,9 +1283,8 @@ class TorusClient:
     def vote(
         self,
         key: Keypair,
-        uids: list[int],
+        agent_keys: list[Ss58Address],
         weights: list[int],
-        netuid: int = 0,
     ) -> ExtrinsicReceipt:
         """
         Casts votes on a list of module UIDs with corresponding weights.
@@ -1303,33 +1307,27 @@ class TorusClient:
             ChainTransactionError: If the transaction fails.
         """
 
-        assert len(uids) == len(weights)
+        assert len(agent_keys) == len(weights)
 
         params = {
-            "uids": uids,
-            "weights": weights,
-            "netuid": netuid,
+            "weights": [*zip(agent_keys, weights)],
         }
-
         response = self.compose_call(
             "set_weights",
             params=params,
             key=key,
-            module="SubnetEmissionModule",
+            module="Emission0",
         )
 
         return response
 
-    def delegate_weight_control(
-        self, key: Keypair, target: Ss58Address, netuid: int
-    ):
+    def delegate_weight_control(self, key: Keypair, target: Ss58Address):
         """
         delegates weight setting control from the current account to the target account.
         Both accounts have to be registered and have a valid validator `spec`
         """
 
         params = {
-            "netuid": netuid,
             "target": target,
         }
 
@@ -1337,7 +1335,23 @@ class TorusClient:
             "delegate_weight_control",
             params=params,
             key=key,
-            module="SubnetEmissionModule",
+            module="Emission0",
+        )
+        return response
+
+    def regain_weight_control(self, key: Keypair):
+        """
+        regains weight setting control to the current account.
+        Both accounts have to be registered and have a valid validator `spec`
+        """
+
+        params: dict[str, Any] = {}
+
+        response = self.compose_call(
+            "regain_weight_control",
+            params=params,
+            key=key,
+            module="Emission0",
         )
         return response
 
@@ -1390,7 +1404,7 @@ class TorusClient:
 
         subnet_data = self.query(
             "SubnetDecryptionData",
-            module="SubnetEmissionModule",
+            module="Emission0",
             params=[netuid],
         )
         if not subnet_data:
@@ -1421,7 +1435,7 @@ class TorusClient:
             "set_weights_encrypted",
             params=params,
             key=key,
-            module="SubnetEmissionModule",
+            module="Emission0",
         )
 
     def update_subnet(
@@ -1706,7 +1720,7 @@ class TorusClient:
             fn="add_subnet_params_proposal",
             params=general_params,
             key=key,
-            module="GovernanceModule",
+            module="Governance",
         )
 
         return response
@@ -1716,13 +1730,13 @@ class TorusClient:
         key: Keypair,
         cid: str,
     ) -> ExtrinsicReceipt:
-        params = {"data": cid}
+        params = {"metadata": cid}
 
         response = self.compose_call(
             fn="add_global_custom_proposal",
             params=params,
             key=key,
-            module="GovernanceModule",
+            module="Governance",
         )
         return response
 
@@ -1757,7 +1771,7 @@ class TorusClient:
             fn="add_subnet_custom_proposal",
             params=params,
             key=key,
-            module="GovernanceModule",
+            module="Governance",
         )
 
         return response
@@ -1791,15 +1805,15 @@ class TorusClient:
                 parameters are invalid.
             ChainTransactionError: If the transaction fails.
         """
-        general_params = cast(dict[str, Any], params)
-        cid = cid or ""
-        general_params["data"] = cid
 
+        data = params.model_dump()
+        cid = cid or ""
+        general_params = {"metadata": cid, "data": data}
         response = self.compose_call(
             fn="add_global_params_proposal",
             params=general_params,
             key=key,
-            module="GovernanceModule",
+            module="Governance",
         )
 
         return response
@@ -1832,7 +1846,7 @@ class TorusClient:
             "vote_proposal",
             key=key,
             params=params,
-            module="GovernanceModule",
+            module="Governance",
         )
 
         return response
@@ -1866,7 +1880,7 @@ class TorusClient:
             "remove_vote_proposal",
             key=key,
             params=params,
-            module="GovernanceModule",
+            module="Governance",
         )
 
         return response
@@ -1886,10 +1900,10 @@ class TorusClient:
         """
 
         response = self.compose_call(
-            "enable_vote_power_delegation",
+            "enable_vote_delegation",
             params={},
             key=key,
-            module="GovernanceModule",
+            module="Governance",
         )
 
         return response
@@ -1909,16 +1923,20 @@ class TorusClient:
         """
 
         response = self.compose_call(
-            "disable_vote_power_delegation",
+            "disable_vote_delegation",
             params={},
             key=key,
-            module="GovernanceModule",
+            module="Governance",
         )
 
         return response
 
-    def add_dao_application(
-        self, key: Keypair, application_key: Ss58Address, data: str
+    def add_application(
+        self,
+        key: Keypair,
+        application_key: Ss58Address,
+        data: str,
+        removing: bool,
     ) -> ExtrinsicReceipt:
         """
         Submits a new application to the general subnet DAO.
@@ -1935,26 +1953,58 @@ class TorusClient:
             ChainTransactionError: If the transaction fails.
         """
 
-        params = {"application_key": application_key, "data": data}
-
+        params = {
+            "agent_key": application_key,
+            "metadata": data,
+            "removing": removing,
+        }
         response = self.compose_call(
-            "add_dao_application",
-            module="GovernanceModule",
-            key=key,
+            "submit_application",
+            module="Governance",
             params=params,
+            key=key,
         )
 
         return response
 
-    def query_map_curator_applications(self) -> dict[str, dict[str, str]]:
+    def accept_application(self, curator: Keypair, application_id: int):
+        """
+        Accepts an application to the general subnet DAO.
+
+        Args:
+            curator: The keypair of the curator accepting the application.
+            application_id: The ID of the application to accept.
+
+        Returns:
+            A receipt of the application acceptance transaction.
+
+        Raises:
+            ChainTransactionError: If the transaction fails.
+        """
+
+        params = {"application_id": application_id}
+        response = self.compose_call(
+            "accept_application",
+            module="Governance",
+            params=params,
+            key=curator,
+        )
+
+        return response
+
+    def query_map_applications(self) -> dict[int, AgentApplication]:
+        storage = "AgentApplications"
         query_result = self.query_map(
-            "CuratorApplications",
-            module="GovernanceModule",
+            storage,
+            module="Governance",
             params=[],
             extract_value=False,
         )
-        applications = query_result.get("CuratorApplications", {})
-        return applications
+        applications = query_result.get(storage, {})
+        return {
+            app_id: AgentApplication.model_validate(app)
+            for app_id, app in applications.items()
+        }
 
     def query_map_proposals(
         self, extract_value: bool = False
@@ -1972,13 +2022,13 @@ class TorusClient:
         Raises:
             QueryError: If the query to the network fails or is invalid.
         """
-
-        return self.query_map(
-            "Proposals", extract_value=extract_value, module="GovernanceModule"
+        prop = self.query_map(
+            "Proposals", extract_value=extract_value, module="Governance"
         )["Proposals"]
+        return prop
 
     def query_map_weights(
-        self, netuid: int = 0, extract_value: bool = False
+        self, extract_value: bool = False
     ) -> dict[int, list[tuple[int, int]]] | None:
         """
         Retrieves a mapping of weights for keys on the network.
@@ -1997,11 +2047,10 @@ class TorusClient:
         """
 
         weights_dict = self.query_map(
-            "Weights",
-            [netuid],
+            "ConsensusMembers",
             extract_value=extract_value,
-            module="SubnetEmissionModule",
-        ).get("Weights")
+            module="Emission0",
+        ).get("ConsensusMembers")
         return weights_dict
 
     def query_map_key(
@@ -2087,7 +2136,7 @@ class TorusClient:
         return self.query_map(
             "PendingEmission",
             extract_value=extract_value,
-            module="SubnetEmissionModule",
+            module="Emission0",
         )["PendingEmission"]
 
     def query_map_subnet_emission(
@@ -2108,7 +2157,7 @@ class TorusClient:
         return self.query_map(
             "SubnetEmission",
             extract_value=extract_value,
-            module="SubnetEmissionModule",
+            module="Emission0",
         )["SubnetEmission"]
 
     def query_map_subnet_consensus(
@@ -2129,7 +2178,7 @@ class TorusClient:
         return self.query_map(
             "SubnetConsensusType",
             extract_value=extract_value,
-            module="SubnetEmissionModule",
+            module="Emission0",
         )["SubnetConsensusType"]
 
     def query_map_incentive(
@@ -2540,6 +2589,16 @@ class TorusClient:
             module="Governance",
         )
 
+    def remove_from_whitelist(
+        self, curator_key: Keypair, agent_key: Ss58Address
+    ):
+        self.compose_call(
+            "remove_from_whitelist",
+            key=curator_key,
+            params={"key": agent_key},
+            module="Governance",
+        )
+
     def query_map_legit_whitelist(
         self, extract_value: bool = False
     ) -> dict[Ss58Address, int]:
@@ -2558,7 +2617,7 @@ class TorusClient:
 
         return self.query_map(
             "LegitWhitelist",
-            module="GovernanceModule",
+            module="Governance",
             extract_value=extract_value,
         )["LegitWhitelist"]
 
@@ -2706,7 +2765,7 @@ class TorusClient:
         )
 
     def get_dao_treasury_address(self) -> Ss58Address:
-        return self.query("DaoTreasuryAddress", module="GovernanceModule")
+        return self.query("DaoTreasuryAddress", module="Governance")
 
     def get_max_allowed_weights(self, netuid: int = 0) -> int:
         """
@@ -2781,7 +2840,7 @@ class TorusClient:
         return self.query("SubnetNames", params=[netuid])
 
     def get_global_dao_treasury(self):
-        return self.query("GlobalDaoTreasury", module="GovernanceModule")
+        return self.query("GlobalDaoTreasury", module="Governance")
 
     def get_n(self, netuid: int = 0) -> int:
         """
@@ -2968,7 +3027,7 @@ class TorusClient:
             QueryError: If the query to the network fails or is invalid.
         """
 
-        return self.query("UnitEmission", module="SubnetEmissionModule")
+        return self.query("UnitEmission", module="Emission0")
 
     def get_tx_rate_limit(self) -> int:
         """
@@ -3027,7 +3086,7 @@ class TorusClient:
             params=[],
         )
 
-    def get_burn(self, netuid: int = 0) -> int:
+    def get_burn(self) -> int:
         """
         Queries the network for the burn setting.
 
@@ -3045,7 +3104,7 @@ class TorusClient:
             QueryError: If the query to the network fails or is invalid.
         """
 
-        return self.query("Burn", params=[netuid])
+        return self.query("Burn", params=[])
 
     def get_min_burn(self) -> int:
         """
@@ -3349,11 +3408,17 @@ class TorusClient:
 
         return result
 
-    def get_voting_power_delegators(self) -> list[Ss58Address]:
-        result = self.query(
-            "NotDelegatingVotingPower", [], module="GovernanceModule"
-        )
+    def get_power_users(self) -> list[Ss58Address]:
+        result = self.query("NotDelegatingVotingPower", [], module="Governance")
         return result
+
+    def deny_application(self, curator: Keypair, application_id: int):
+        self.compose_call(
+            "deny_application",
+            key=curator,
+            params={"application_id": application_id},
+            module="Governance",
+        )
 
     def add_transfer_dao_treasury_proposal(
         self,
@@ -3365,7 +3430,7 @@ class TorusClient:
         params = {"dest": dest, "value": amount_nano, "data": data}
 
         return self.compose_call(
-            module="GovernanceModule",
+            module="Governance",
             fn="add_transfer_dao_treasury_proposal",
             params=params,
             key=key,

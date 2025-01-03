@@ -374,7 +374,6 @@ def weight_delegation(
     ctx: Context,
     key: str,
     target: str,
-    netuid: int,
 ):
     context = make_custom_context(ctx)
     client = context.com_client()
@@ -388,4 +387,22 @@ def weight_delegation(
     ):
         raise typer.Abort()
 
-    client.delegate_weight_control(resolved_key, resolved_target, netuid)
+    client.delegate_weight_control(resolved_key, resolved_target)
+
+
+@key_app.command()
+def regain_weight_delegation(
+    ctx: Context,
+    key: str,
+):
+    context = make_custom_context(ctx)
+    client = context.com_client()
+    resolved_key = context.load_key(key, None)
+
+    if not context.confirm(
+        "Are you sure you want to regain vote power "
+        f"from {typer.style(key, fg=typer.colors.CYAN)}?"
+    ):
+        raise typer.Abort()
+
+    client.regain_weight_control(resolved_key)

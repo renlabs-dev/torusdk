@@ -5,6 +5,7 @@ from typing import Any, Callable, Mapping, TypeVar, cast
 import rich
 import rich.prompt
 import typer
+from pydantic import BaseModel
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -18,7 +19,6 @@ from torus.compat.key import resolve_key_ss58_encrypted, try_classic_load_key
 from torus.errors import InvalidPasswordError, PasswordNotProvidedError
 from torus.types import (
     AgentInfoWithOptionalBalance,
-    NetworkParams,
     Ss58Address,
     SubnetParamsWithEmission,
 )
@@ -242,6 +242,53 @@ def print_table_from_plain_dict(
     console.print(table)
 
 
+T = TypeVar("T", bound=BaseModel)
+
+
+def render_pydantic_table(
+    objects: list[T], console: Console, title: str = ""
+) -> None:
+    """
+    Renders a rich table from a list of Pydantic objects.
+
+    Args:
+        objects: A list of Pydantic objects.
+        console: The rich Console object.
+        title: Optional title for the table.
+    """
+    if not objects:
+        return
+
+    # Create a rich table
+    table = Table(title=title, show_header=True, header_style="bold magenta")
+
+    # Add columns to the table based on the Pydantic model fields
+    for field_name, field in objects[0].model_fields.items():
+        table.add_column(field_name, style="white", vertical="middle")
+
+    # Add rows to the table from Pydantic objects
+    for obj in objects:
+        row_data: list[str | Table] = []
+        for field_name, field in obj.model_fields.items():
+            value = getattr(obj, field_name)
+            if isinstance(value, BaseModel):
+                subtable = Table(
+                    show_header=False,
+                    padding=(0, 0, 0, 0),
+                    border_style="bright_black",
+                )
+                for subfield_name, subfield in value.model_fields.items():
+                    subfield_value = getattr(value, subfield_name)
+                    subtable.add_row(f"{subfield_name}: {subfield_value}")
+                row_data.append(subtable)
+            else:
+                row_data.append(str(value))
+        table.add_row(*row_data)
+
+    # Render the table
+    console.print(table)
+
+
 def print_table_standardize(
     result: dict[str, list[Any]], console: Console
 ) -> None:
@@ -355,14 +402,9 @@ def get_universal_password(ctx: CustomCtx) -> str:
     return universal_password
 
 
-def tranform_network_params(params: NetworkParams):
+def tranform_network_params(params: dict[str, Any]):
     """Transform network params to be human readable."""
-    governance_config = params["governance_config"]
-    allocation = governance_config["proposal_reward_treasury_allocation"]
-    governance_config = cast(dict[str, Any], governance_config)
-    governance_config["proposal_reward_treasury_allocation"] = f"{allocation}%"
-    params_ = cast(dict[str, Any], params)
-    params_["governance_config"] = governance_config
+    params_ = params
     general_params = dict_from_nano(
         params_,
         [

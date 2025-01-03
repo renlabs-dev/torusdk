@@ -1,5 +1,5 @@
 import re
-from typing import Optional, cast
+from typing import Optional
 
 import typer
 from rich.progress import track
@@ -94,22 +94,12 @@ def propose_globally(
     cid: str,
     max_name_length: int = typer.Option(None),
     min_name_length: int = typer.Option(None),
-    max_allowed_subnets: int = typer.Option(None),
-    max_allowed_modules: int = typer.Option(None),
-    max_registrations_per_block: int = typer.Option(None),
+    max_allowed_agents: int = typer.Option(None),
     max_allowed_weights: int = typer.Option(None),
-    max_burn: int = typer.Option(None),
-    min_burn: int = typer.Option(None),
-    floor_delegation_fee: int = typer.Option(None),
-    floor_founder_share: int = typer.Option(None),
     min_weight_stake: int = typer.Option(None),
-    curator: str = typer.Option(None),
-    proposal_cost: int = typer.Option(None),
-    proposal_expiration: int = typer.Option(None),
-    general_subnet_application_cost: int = typer.Option(None),
-    kappa: int = typer.Option(None),
-    rho: int = typer.Option(None),
-    subnet_immunity_period: int = typer.Option(None),
+    min_weight_control_fee: int = typer.Option(None),
+    min_staking_fee: int = typer.Option(None),
+    dividends_participation_weight: int = typer.Option(None),
 ):
     provided_params = locals().copy()
     provided_params.pop("ctx")
@@ -128,16 +118,10 @@ def propose_globally(
 
     resolved_key = context.load_key(key, None)
 
-    provided_params = cast(NetworkParams, provided_params)
     global_params = get_global_params(client)
-    global_params_config = global_params["governance_config"]
-    global_params["proposal_cost"] = global_params_config["proposal_cost"]  # type: ignore
-    global_params["proposal_expiration"] = global_params_config[  # type: ignore
-        "proposal_expiration"
-    ]
-    global_params.pop("governance_config")  # type: ignore
     global_params.update(provided_params)
 
+    global_params = NetworkParams(**global_params)
     if not re.match(IPFS_REGEX, cid):
         context.error(f"CID provided is invalid: {cid}")
         typer.Exit(code=1)
@@ -149,7 +133,7 @@ def propose_globally(
 def get_valid_voting_keys(
     ctx: CustomCtx,
     client: TorusClient,
-    threshold: int = 25000000000,  # 25 $COMAI
+    threshold: int = 25000000000,  # 25 $TOR
 ) -> dict[str, int]:
     local_keys = local_key_addresses(password_provider=ctx.password_manager)
     keys_stake = local_keys_to_stakedbalance(client, local_keys)
@@ -174,7 +158,7 @@ def vote_proposal(
 
     if key is None:
         context.info("Voting with all keys on disk...")
-        delegators = client.get_voting_power_delegators()
+        delegators = client.get_power_users()
         keys_stake = get_valid_voting_keys(context, client)
         keys_stake = {
             key: stake
@@ -220,56 +204,11 @@ def add_custom_proposal(ctx: Context, key: str, cid: str):
         ipfs_prefix = "ipfs://"
         cid = ipfs_prefix + cid
     client = context.com_client()
-    # append the ipfs hash
-    ipfs_prefix = "ipfs://"
-    cid = ipfs_prefix + cid
 
     resolved_key = context.load_key(key, None)
 
     with context.progress_status("Adding a proposal..."):
         client.add_custom_proposal(resolved_key, cid)
-
-
-@network_app.command()
-def set_root_weights(ctx: Context, key: str):
-    """
-    Command for rootnet validators to set the weights on subnets.
-    """
-
-    context = make_custom_context(ctx)
-    client = context.com_client()
-    rootnet_id = 0
-
-    # Ask set new weights ?
-    with context.progress_status("Getting subnets to vote on..."):
-        # dict[netuid, subnet_names]
-        subnet_names = client.query_map_subnet_names()
-
-    choices = [f"{uid}: {name}" for uid, name in subnet_names.items()]
-
-    # Prompt user to select subnets
-    selected_subnets = typer.prompt(
-        "Select subnets to set weights for (space-separated list of UIDs)",
-        prompt_suffix="\n" + "\n".join(choices) + "\nEnter UIDs: ",
-    )
-
-    # Parse the input string into a list of integers
-    uids = [int(uid.strip()) for uid in selected_subnets.split()]
-
-    weights: list[int] = []
-    for uid in uids:
-        weight = typer.prompt(
-            f"Enter weight for subnet {uid} ({subnet_names[uid]})", type=float
-        )
-        weights.append(weight)
-
-    typer.echo("Selected subnets and weights:")
-    for uid, weight in zip(uids, weights):
-        typer.echo(f"Subnet {uid} ({subnet_names[uid]}): {weight}")
-
-    resolved_key = context.load_key(key, None)
-
-    client.vote(netuid=rootnet_id, uids=uids, weights=weights, key=resolved_key)
 
 
 @network_app.command()
@@ -284,8 +223,8 @@ def registration_burn(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    burn = client.get_burn(netuid)
+    burn = client.get_burn()
     registration_cost = c_balance.from_nano(burn)
     context.info(
-        f"The cost to register on a netuid: {netuid} is: {registration_cost} $COMAI"
+        f"The cost to register on a netuid: {netuid} is: {registration_cost} $TOR"
     )

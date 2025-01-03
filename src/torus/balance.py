@@ -30,7 +30,7 @@ def from_horus(amount: int, subnet_tempo: int = 100) -> float:
 
 def repr_j(amount: int):
     """
-    Given an amount in nano, returns a representation of it in tokens/COMAI.
+    Given an amount in nano, returns a representation of it in tokens/TOR.
 
     E.g. "103.2J".
     """
