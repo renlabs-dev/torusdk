@@ -2,13 +2,13 @@
 
 The Torus CLI serves as an official SDK for the network, offering a streamlined and
 user-friendly experience. It is designed for simplicity and scalable
-development. To learn more [visit docs](https://docs.torus.network/installation/setup-torus-cli)
+development. To learn more [visit docs](https://docs.torus.network/installation/setup-torus)
 
 ## Contents
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Discord Chat](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/W2H8Q6aE)
-[![PyPI version](https://badge.fury.io/py/torus.svg)](https://pypi.org/project/torus/)
+[![PyPI version](https://badge.fury.io/py/torus.svg)](https://pypi.org/project/torusdk/)
 
 - [Torus CLI](#torus-cli)
   - [Contents](#contents)
@@ -32,16 +32,16 @@ development. To learn more [visit docs](https://docs.torus.network/installation/
 
 Requirements: Python 3.10+
 
-Install the `torus-cli` Python package directly with `pip`:
+Install the `torus` Python package directly with `pip`:
 
 ```sh
-pip install torus
+pip install torusdk
 ```
 
 Or add it to your Poetry project with:
 
 ```sh
-poetry add torus
+poetry add torusdk
 ```
 
 ## Installation with Nix
@@ -53,7 +53,7 @@ nix profile install .
 
 ## Features
 
-The `torus-cli` offers a variety of features for token management and agent interaction:
+The `torus` offers a variety of features for token management and agent interaction:
 
 - Commands for managing keys, tokens, and agents
 - Key management including creation and listing
@@ -67,7 +67,7 @@ The `torus-cli` offers a variety of features for token management and agent inte
 The CLI commands are structured as follows:
 
 ```sh
-torus-cli [OPTIONS] COMMAND [ARGS]
+torus [OPTIONS] COMMAND [ARGS]
 ```
 
 There are six top-level subcommands:
@@ -79,7 +79,7 @@ There are six top-level subcommands:
 - **misc**: Access miscellaneous information such as APR and circulating supply.
 
 ```sh
-torus-cli subcommand [OPTIONS] COMMAND [ARGS]...
+torus subcommand [OPTIONS] COMMAND [ARGS]...
 ```
 
 ## Examples
@@ -88,56 +88,56 @@ torus-cli subcommand [OPTIONS] COMMAND [ARGS]...
 
 ```sh
 # Show staked, free and total balance.
-torus-cli balance show 5FgfC2DY4yreEWEughz46RZYQ8oBhHVqD9fVq6gV89E6z4Ea
+torus balance show 5FgfC2DY4yreEWEughz46RZYQ8oBhHVqD9fVq6gV89E6z4Ea
 ```
 
 ### Creating a Key
 
 ```sh
-torus-cli key create key_name
+torus key create key_name
 ```
 
 ### Retrieving Key Info
 
 ```sh
-torus-cli key show key_name
+torus key show key_name
 
 # Add the `--show-private` flag to show sensitive fields like private key.
-torus-cli key show key_name --show-private
+torus key show key_name --show-private
 ```
 
 ### Listing Keys
 
 ```sh
 # Lists the names and addresses of keys stored on disk.
-torus-cli key list
+torus key list
 ```
 
 ### List Keys With Balances
 
 ```sh
 # Lists keys stored on disk with their balance (free, staked and total).
-torus-cli key balances
+torus key balances
 ```
 
 ### Retrieving Agent Information
 
 ```sh
 # Note that the agent has to be registered on the network.
-torus-cli agent info vali::calc [--balance]
+torus agent info vali::calc [--balance]
 ```
 
 ### Retrieving Global Parameters
 
 ```sh
-torus-cli network params
+torus network params
 ```
 
 ### Retrieving Circulating Supply
 
 ```sh
 # Gets all tokens then were ever emitted minus burned tokens.
-torus-cli misc circulating-supply
+torus misc circulating-supply
 ```
 
 ## Completions
@@ -146,9 +146,9 @@ You can enable completions for your shell by running:
 
 ```sh
 # On bash
-torus-cli --install-completion bash
+torus --install-completion bash
 # On zsh
-torus-cli --install-completion zsh
+torus --install-completion zsh
 ```
 
 ## Contributing
@@ -171,7 +171,7 @@ it can [require some environment-specific binaries to be installed][ruff-install
 
 ---
 
-[open an issue on GitHub]: https://github.com/renlabs-dev/torus-cli/issues/new/choose
-[torus-cli Discord channel]: https://go.renlabs-dev.org/torus-cli-channel
-[GitHub discussions page]: https://github.com/renlabs-dev/torus-cli/discussions
+[open an issue on GitHub]: https://github.com/renlabs-dev/torus/issues/new/choose
+[torus Discord channel]: https://go.renlabs-dev.org/torus-channel
+[GitHub discussions page]: https://github.com/renlabs-dev/torus/discussions
 [ruff-installation]: https://docs.astral.sh/ruff/installation/
