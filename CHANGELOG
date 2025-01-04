@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.3.1
+- Disabling `torus misc apr`
+
 ## 0.2.3
 - Fixed default testnet node url
 
