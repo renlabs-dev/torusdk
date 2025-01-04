@@ -45,12 +45,13 @@ def circulating_supply(ctx: Context, unit: BalanceUnit = BalanceUnit.joule):
     context.output(format_balance(supply, unit))
 
 
-@misc_app.command()
+@misc_app.command(hidden=True)
 def apr(ctx: Context, fee: int = 0):
     """
     Gets the current staking APR on validators.
     The miner reinvest rate & fee are specified in percentages.
     """
+    raise NotImplementedError("Emissions are not enabled yet")
     context = make_custom_context(ctx)
     client = context.com_client()
 
