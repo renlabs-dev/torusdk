@@ -1,5 +1,4 @@
 import gc
-import hashlib
 import json
 import queue
 import threading
@@ -15,7 +14,6 @@ from torustrateinterface import ExtrinsicReceipt, Keypair, SubstrateInterface
 from torustrateinterface.storage import StorageKey
 
 from torusdk._common import transform_stake_dmap
-from torusdk.encryption import bytes_from_hex, encrypt_weights
 from torusdk.errors import ChainTransactionError, NetworkQueryError
 from torusdk.types import (
     Agent,
@@ -1375,68 +1373,6 @@ class TorusClient:
             sudo=True,
         )
         return response
-
-    def vote_encrypted(
-        self,
-        key: Keypair,
-        uids: list[int],
-        weights: list[int],
-        netuid: int = 0,
-    ) -> ExtrinsicReceipt:
-        """
-        Casts encrypted votes for module UIDs with corresponding weights.
-
-        Args:
-            key (Keypair): The keypair used for signing the transaction.
-            uids (list[int]): List of UIDs to vote for.
-            weights (list[int]): List of weights corresponding to each UID.
-            netuid (int, optional): Network UID. Defaults to 0.
-
-        Returns:
-            ExtrinsicReceipt: Receipt of the submitted extrinsic.
-
-        Raises:
-            ValueError: If there's a length mismatch between UIDs and weights,
-                if subnet data is not found, or if subnet key format is invalid.
-        """
-        if len(uids) != len(weights):
-            raise ValueError("Length mismatch between UIDs and weights")
-
-        subnet_data = self.query(
-            "SubnetDecryptionData",
-            module="Emission0",
-            params=[netuid],
-        )
-        if not subnet_data:
-            raise ValueError("Subnet data not found")
-
-        subnet_key = subnet_data.get("node_public_key")
-        if not subnet_key or len(subnet_key) < 2:
-            raise ValueError("Invalid subnet key format")
-
-        vote_data = list(zip(uids, weights))
-        decryptor = (
-            bytes_from_hex(subnet_key[0]),
-            bytes_from_hex(subnet_key[1]),
-        )
-        validator_key = [int(x) for x in key.public_key]
-
-        encrypted_weights = encrypt_weights(decryptor, vote_data, validator_key)
-        weights_hash = hashlib.sha256(str(weights).encode()).hexdigest()
-
-        params = {
-            "uids": uids,
-            "encrypted_weights": encrypted_weights,
-            "netuid": netuid,
-            "decrypted_weights_hash": weights_hash,
-        }
-
-        return self.compose_call(
-            "set_weights_encrypted",
-            params=params,
-            key=key,
-            module="Emission0",
-        )
 
     def update_subnet(
         self,

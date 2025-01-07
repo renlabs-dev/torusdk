@@ -12,11 +12,11 @@ from rich.table import Table
 from torustrateinterface import Keypair
 from typer import Context
 
-from torusdk._common import ComxSettings, get_node_url
+from torusdk._common import TorusSettings, get_node_url
 from torusdk.balance import dict_from_nano, from_nano
 from torusdk.client import TorusClient
-from torusdk.compat.key import resolve_key_ss58_encrypted, try_classic_load_key
 from torusdk.errors import InvalidPasswordError, PasswordNotProvidedError
+from torusdk.key import load_keypair, resolve_key_ss58
 from torusdk.types import (
     AgentInfoWithOptionalBalance,
     Ss58Address,
@@ -26,6 +26,17 @@ NOT_IMPLEMENTED_MESSAGE = (
     "method not available. "
     "It's going to be rolled out in the coming updates."
 )
+
+HIDE_FEATURES = False
+
+
+KEY_DEPRECATION_WARNING = (
+    "\nYou are using a legacy key storage. "
+    "This will be deprecated in the future. "
+    "Please migrate your key to torus storage "
+    "using the `torus key migrate [key]` command.\n"
+)
+KEY_DEPRECATION_STYLE = f"{typer.colors.RED} bold on yellow"
 
 
 @dataclass
@@ -41,7 +52,7 @@ class ExtendedContext(Context):
 
 class CliPasswordProvider:
     def __init__(
-        self, settings: ComxSettings, prompt_secret: Callable[[str], str]
+        self, settings: TorusSettings, prompt_secret: Callable[[str], str]
     ):
         self.settings = settings
         self.prompt_secret = prompt_secret
@@ -68,7 +79,7 @@ class CliPasswordProvider:
 
 class CustomCtx:
     ctx: ExtendedContext
-    settings: ComxSettings
+    settings: TorusSettings
     console: rich.console.Console
     console_err: rich.console.Console
     password_manager: CliPasswordProvider
@@ -77,7 +88,7 @@ class CustomCtx:
     def __init__(
         self,
         ctx: ExtendedContext,
-        settings: ComxSettings,
+        settings: TorusSettings,
         console: rich.console.Console,
         console_err: rich.console.Console,
         com_client: TorusClient | None = None,
@@ -134,9 +145,9 @@ class CustomCtx:
         self,
         message: str,
         *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
+        **kwargs: Any,
     ) -> None:
-        self.console_err.print(message, *args, **kwargs)  # type: ignore
+        self.console_err.print(message, *args, **kwargs)
 
     def error(
         self,
@@ -161,27 +172,20 @@ class CustomCtx:
             message, password=True, console=self.console_err
         )
 
+    def resolve_ss58(self, key: Ss58Address | Keypair | str):
+        try:
+            ss58 = resolve_key_ss58(key)
+            return ss58
+        except ValueError as e:
+            self.error(e.args[0])
+            raise typer.Exit(code=1)
+
     def load_key(self, key: str, password: str | None = None) -> Keypair:
         try:
-            keypair = try_classic_load_key(
+            keypair = load_keypair(
                 key, password, password_provider=self.password_manager
             )
             return keypair
-        except PasswordNotProvidedError:
-            self.error(f"Password not provided for key '{key}'")
-            raise typer.Exit(code=1)
-        except InvalidPasswordError:
-            self.error(f"Incorrect password for key '{key}'")
-            raise typer.Exit(code=1)
-
-    def resolve_key_ss58(
-        self, key: Ss58Address | Keypair | str, password: str | None = None
-    ) -> Ss58Address:
-        try:
-            address = resolve_key_ss58_encrypted(
-                key, password, password_provider=self.password_manager
-            )
-            return address
         except PasswordNotProvidedError:
             self.error(f"Password not provided for key '{key}'")
             raise typer.Exit(code=1)
@@ -193,7 +197,7 @@ class CustomCtx:
 def make_custom_context(ctx: typer.Context) -> CustomCtx:
     return CustomCtx(
         ctx=cast(ExtendedContext, ctx),  # TODO: better check
-        settings=ComxSettings(),
+        settings=TorusSettings(),
         console=Console(),
         console_err=Console(stderr=True),
     )
@@ -263,14 +267,11 @@ def render_pydantic_table(
     if not objects:
         return
 
-    # Create a rich table
     table = Table(title=title, show_header=True, header_style="bold magenta")
 
-    # Add columns to the table based on the Pydantic model fields
     for field_name, _ in objects[0].model_fields.items():
         table.add_column(field_name, style="white", vertical="middle")
 
-    # Add rows to the table from Pydantic objects
     for obj in objects:
         row_data: list[str | Table] = []
         for field_name, _ in obj.model_fields.items():
@@ -289,7 +290,6 @@ def render_pydantic_table(
                 row_data.append(str(value))
         table.add_row(*row_data)
 
-    # Render the table
     console.print(table)
 
 

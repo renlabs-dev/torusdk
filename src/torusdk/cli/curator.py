@@ -37,7 +37,7 @@ def add_to_whitelist(ctx: Context, curator_key: str, agent_key: str):
     client = context.com_client()
 
     resolved_curator_key = context.load_key(curator_key, None)
-    resolved_agent_key = context.resolve_key_ss58(agent_key, None)
+    resolved_agent_key = context.resolve_ss58(agent_key)
 
     with context.progress_status(f"Adding Agent {agent_key} to whitelist..."):
         client.add_to_whitelist(

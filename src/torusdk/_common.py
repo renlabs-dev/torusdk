@@ -30,8 +30,8 @@ def deprecated(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-class ComxSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="COMX_")
+class TorusSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="TORUS_")
     # TODO: improve node lists
     NODE_URLS: list[str] = [
         "wss://api.torus.network",
@@ -42,35 +42,35 @@ class ComxSettings(BaseSettings):
 
 
 def get_node_url(
-    comx_settings: ComxSettings | None = None, *, use_testnet: bool = False
+    torus_settings: TorusSettings | None = None, *, use_testnet: bool = False
 ) -> str:
-    comx_settings = comx_settings or ComxSettings()
+    torus_settings = torus_settings or TorusSettings()
     match use_testnet:
         case True:
-            node_url = random.choice(comx_settings.TESTNET_NODE_URLS)
+            node_url = random.choice(torus_settings.TESTNET_NODE_URLS)
         case False:
-            node_url = random.choice(comx_settings.NODE_URLS)
+            node_url = random.choice(torus_settings.NODE_URLS)
     return node_url
 
 
 def get_available_nodes(
-    comx_settings: ComxSettings | None = None, *, use_testnet: bool = False
+    torus_settings: TorusSettings | None = None, *, use_testnet: bool = False
 ) -> list[str]:
-    comx_settings = comx_settings or ComxSettings()
+    torus_settings = torus_settings or TorusSettings()
 
     match use_testnet:
         case True:
-            node_urls = comx_settings.TESTNET_NODE_URLS
+            node_urls = torus_settings.TESTNET_NODE_URLS
         case False:
-            node_urls = comx_settings.NODE_URLS
+            node_urls = torus_settings.NODE_URLS
     return node_urls
 
 
 class BalanceUnit(str, Enum):
-    joule = "joule"
-    j = "j"
-    nano = "nano"
-    n = "n"
+    joule = "rems"
+    j = "r"
+    nano = "torus"
+    n = "t"
 
 
 def format_balance(balance: int, unit: BalanceUnit = BalanceUnit.nano) -> str:
@@ -84,7 +84,7 @@ def format_balance(balance: int, unit: BalanceUnit = BalanceUnit.nano) -> str:
         case BalanceUnit.joule | BalanceUnit.j:
             in_joules = from_nano(balance)
             round_joules = round(in_joules, 4)
-            return f"{round_joules:,} $TORUS"
+            return f"{round_joules:,}" + " \u2653"
 
 
 K = TypeVar("K")

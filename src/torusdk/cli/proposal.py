@@ -13,7 +13,7 @@ from torusdk.cli._common import (
     print_table_from_plain_dict,
 )
 from torusdk.client import TorusClient
-from torusdk.compat.key import local_key_addresses
+from torusdk.key import local_key_adresses
 from torusdk.misc import (
     local_keys_to_stakedbalance,
 )
@@ -27,7 +27,7 @@ def get_valid_voting_keys(
     client: TorusClient,
     threshold: int = 25000000000,  # 25 $TORUS
 ) -> dict[str, int]:
-    local_keys = local_key_addresses(password_provider=ctx.password_manager)
+    local_keys = local_key_adresses(password_provider=ctx.password_manager)
     keys_stake = local_keys_to_stakedbalance(client, local_keys)
     keys_stake = {
         key: stake for key, stake in keys_stake.items() if stake >= threshold
@@ -150,7 +150,7 @@ def transfer_dao_funds(
 
     nano_amount = to_nano(amount)
     keypair = context.load_key(signer_key, None)
-    dest = context.resolve_key_ss58(dest, None)
+    dest = context.resolve_ss58(dest)
 
     client = context.com_client()
     client.add_transfer_dao_treasury_proposal(keypair, cid, nano_amount, dest)

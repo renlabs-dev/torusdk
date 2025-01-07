@@ -6,6 +6,7 @@ from typer import Context
 from torusdk._common import intersection_update
 from torusdk.balance import from_nano
 from torusdk.cli._common import (
+    HIDE_FEATURES,
     make_custom_context,
     print_module_info,
     print_table_from_plain_dict,
@@ -19,7 +20,7 @@ agent_app = typer.Typer(no_args_is_help=True)
 
 # TODO: refactor agent register CLI
 # - key can be infered from name or vice-versa?
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def register(
     ctx: Context,
     name: str,
@@ -84,8 +85,8 @@ def add_application(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    resolved_key = context.load_key(payer_key, None)
-    application_addr = context.resolve_key_ss58(application_key, None)
+    resolved_key = context.load_key(payer_key)
+    application_addr = context.resolve_ss58(application_key)
     application_burn = get_governance_config(client).agent_application_cost
     confirm = context.confirm(
         f"{from_nano(application_burn)} tokens will be burned. Do you want to continue?"
@@ -103,7 +104,7 @@ def add_application(
     context.info("Application added.")
 
 
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def deregister(ctx: Context, key: str):
     """
     Deregisters an agent from a subnet.
@@ -111,7 +112,7 @@ def deregister(ctx: Context, key: str):
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    resolved_key = context.load_key(key, None)
+    resolved_key = context.load_key(key)
 
     with context.progress_status("Deregistering your agent..."):
         response = client.deregister_module(key=resolved_key)
@@ -122,7 +123,7 @@ def deregister(ctx: Context, key: str):
             raise ChainTransactionError(response.error_message)  # type: ignore
 
 
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def update(
     ctx: Context,
     key: str,
@@ -142,7 +143,7 @@ def update(
     if metadata and len(metadata) > 59:
         raise ValueError("Metadata must be less than 60 characters")
 
-    resolved_key = context.load_key(key, None)
+    resolved_key = context.load_key(key)
 
     agents = get_map_modules(client, include_balances=False)
     modules_to_list = [value for _, value in agents.items()]
@@ -186,7 +187,7 @@ def update(
         raise ChainTransactionError(response.error_message)  # type: ignore
 
 
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def info(ctx: Context, name: str, balance: bool = False):
     """
     Gets agent info
@@ -211,7 +212,7 @@ def info(ctx: Context, name: str, balance: bool = False):
     )
 
 
-@agent_app.command(name="list", hidden=True)
+@agent_app.command(name="list", hidden=HIDE_FEATURES)
 def inventory(ctx: Context, balances: bool = False):
     """
     Agents stats on the network.

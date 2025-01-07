@@ -21,7 +21,6 @@ def free_balance(
     ctx: Context,
     key: str,
     unit: BalanceUnit = BalanceUnit.joule,
-    password: Optional[str] = None,
 ):
     """
     Gets free balance of a key.
@@ -29,7 +28,7 @@ def free_balance(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    key_address = context.resolve_key_ss58(key, password)
+    key_address = context.resolve_ss58(key)
 
     with context.progress_status(
         f"Getting free balance of key {key_address}..."
@@ -52,7 +51,7 @@ def staked_balance(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    key_address = context.resolve_key_ss58(key, password)
+    key_address = context.resolve_ss58(key)
 
     with context.progress_status(
         f"Getting staked balance of key {key_address}..."
@@ -67,7 +66,6 @@ def show(
     ctx: Context,
     key: str,
     unit: BalanceUnit = BalanceUnit.joule,
-    password: Optional[str] = None,
 ):
     """
     Gets entire balance of a key (free balance + staked balance).
@@ -75,7 +73,7 @@ def show(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    key_address = context.resolve_key_ss58(key, password)
+    key_address = context.resolve_ss58(key)
 
     with context.progress_status(f"Getting value of key {key_address}..."):
         staked_balance = sum(client.get_stakingto(key=key_address).values())
@@ -98,7 +96,6 @@ def get_staked(
     ctx: Context,
     key: str,
     unit: BalanceUnit = BalanceUnit.joule,
-    password: Optional[str] = None,
 ):
     """
     Gets total stake of a key it delegated across other keys.
@@ -106,7 +103,7 @@ def get_staked(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    key_address = context.resolve_key_ss58(key, password)
+    key_address = context.resolve_ss58(key)
 
     with context.progress_status(f"Getting stake of {key_address}..."):
         result = sum(client.get_stakingto(key=key_address).values())
@@ -125,7 +122,7 @@ def transfer(ctx: Context, key: str, amount: float, dest: str):
     nano_amount = to_nano(amount)
 
     resolved_key = context.load_key(key, None)
-    resolved_dest = context.resolve_key_ss58(dest, None)
+    resolved_dest = context.resolve_ss58(dest)
 
     if not context.confirm(
         f"Are you sure you want to transfer {amount} tokens to {dest}?"
@@ -155,8 +152,8 @@ def transfer_stake(
 
     nano_amount = to_nano(amount)
     keypair = context.load_key(key, None)
-    resolved_from = context.resolve_key_ss58(from_key)
-    resolved_dest = context.resolve_key_ss58(dest)
+    resolved_from = context.resolve_ss58(from_key)
+    resolved_dest = context.resolve_ss58(dest)
 
     with context.progress_status(
         f"Transferring {amount} tokens from {from_key} to {dest}' ..."
@@ -189,7 +186,7 @@ def stake(
 
     nano_amount = to_nano(amount)
     keypair = context.load_key(key, None)
-    resolved_dest = context.resolve_key_ss58(dest, None)
+    resolved_dest = context.resolve_ss58(dest)
 
     delegating_message = (
         "By default you delegate DAO "
@@ -220,7 +217,7 @@ def unstake(ctx: Context, key: str, amount: float, dest: str):
 
     nano_amount = to_nano(amount)
     keypair = context.load_key(key, None)
-    resolved_dest = context.resolve_key_ss58(dest, None)
+    resolved_dest = context.resolve_ss58(dest)
 
     with context.progress_status(f"Unstaking {amount} tokens from {dest}'..."):
         response = client.unstake(

@@ -5,9 +5,13 @@ from typer import Context
 
 from torusdk._common import BalanceUnit, format_balance
 from torusdk.balance import from_nano
-from torusdk.cli._common import make_custom_context, print_module_info
+from torusdk.cli._common import (
+    HIDE_FEATURES,
+    make_custom_context,
+    print_module_info,
+)
 from torusdk.client import TorusClient
-from torusdk.compat.key import local_key_addresses
+from torusdk.key import local_key_adresses
 from torusdk.misc import get_map_modules
 from torusdk.types import Ss58Address
 
@@ -45,7 +49,7 @@ def circulating_supply(ctx: Context, unit: BalanceUnit = BalanceUnit.joule):
     context.output(format_balance(supply, unit))
 
 
-@misc_app.command(hidden=True)
+@misc_app.command(hidden=HIDE_FEATURES)
 def apr(ctx: Context, fee: int = 0):
     """
     Gets the current staking APR on validators.
@@ -79,7 +83,7 @@ def apr(ctx: Context, fee: int = 0):
 
 
 # TODO: REVIEW THIS
-@misc_app.command(name="stats", hidden=True)
+@misc_app.command(name="stats", hidden=HIDE_FEATURES)
 def stats(ctx: Context, balances: bool = False, netuid: int = 0):
     raise NotImplementedError("Stat is going to be added soon")
     context = make_custom_context(ctx)
@@ -90,7 +94,7 @@ def stats(ctx: Context, balances: bool = False, netuid: int = 0):
     ):
         agents = get_map_modules(client, include_balances=balances)
     modules_to_list = [value for _, value in agents.items()]
-    local_keys = local_key_addresses(password_provider=context.password_manager)
+    local_keys = local_key_adresses(password_provider=context.password_manager)
     local_modules = [
         *filter(
             lambda module: module["key"] in local_keys.values(), modules_to_list
