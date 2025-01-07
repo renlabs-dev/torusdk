@@ -3,7 +3,7 @@ Common types for the torus module.
 """
 
 from enum import Enum
-from typing import NewType, TypedDict
+from typing import Any, NewType, TypedDict
 
 from pydantic import BaseModel
 
@@ -67,7 +67,6 @@ class AgentApplication(BaseModel):
     expires_at: int
     action: str
     status: str | dict[str, dict[str, bool]]
-
 
 class DisplayGovernanceConfiguration(BaseModel):
     proposal_cost: float
@@ -159,6 +158,20 @@ class SubnetParamsMaps(TypedDict):
     netuid_to_max_encryption_period: dict[int, int]
     netuid_to_copier_margin: dict[int, int]
     netuid_to_use_weights_encryption: dict[int, int]
+
+class Proposal(BaseModel):
+    id: int
+    proposer: Ss58Address
+    expiration_block: int
+    data: str
+    status: str | dict[str, dict[str, bool]]
+    metadata: str
+    proposal_cost: int
+    creation_block: int
+
+
+class ProposalUnwrapped(Proposal):
+    custom: dict[str, Any] | None
 
 
 # WIP

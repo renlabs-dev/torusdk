@@ -23,6 +23,7 @@ from torusdk.types import (
     NetworkParams,
     Ss58Address,
     SubnetParams,
+    Proposal,
 )
 
 # TODO: InsufficientBalanceError, MismatchedLengthError etc
@@ -2008,9 +2009,9 @@ class TorusClient:
 
     def query_map_proposals(
         self, extract_value: bool = False
-    ) -> dict[int, dict[str, Any]]:
+    ) -> dict[int,  Proposal]:
         """
-        Retrieves a mappping of proposals from the network.
+        Retrieves a mapping of proposals from the network.
 
         Queries the network and returns a mapping of proposal IDs to
         their respective parameters.
@@ -2022,10 +2023,18 @@ class TorusClient:
         Raises:
             QueryError: If the query to the network fails or is invalid.
         """
-        prop = self.query_map(
-            "Proposals", extract_value=extract_value, module="Governance"
-        )["Proposals"]
-        return prop
+        storage = "Proposals"
+        query_result = self.query_map(
+            storage,
+            extract_value=extract_value,
+            params=[],
+            module="Governance"
+        )
+        proposals = query_result.get(storage, {})
+        return {
+            proposal_id: Proposal.model_validate(proposal)
+            for proposal_id, proposal in proposals.items()
+        }
 
     def query_map_weights(
         self, extract_value: bool = False

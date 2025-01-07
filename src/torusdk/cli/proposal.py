@@ -10,7 +10,7 @@ from torusdk.balance import to_nano
 from torusdk.cli._common import (
     CustomCtx,
     make_custom_context,
-    print_table_from_plain_dict,
+    render_pydantic_table,
 )
 from torusdk.client import TorusClient
 from torusdk.compat.key import local_key_addresses
@@ -119,16 +119,12 @@ def list_proposals(ctx: Context, query_cid: bool = typer.Option(True)):
         except IndexError:
             context.info("No proposals found.")
             return
-
-    for proposal_id, batch_proposal in proposals.items():
-        status = batch_proposal["status"]
-        if isinstance(status, dict):
-            batch_proposal["status"] = [*status.keys()][0]
-        print_table_from_plain_dict(
-            batch_proposal,
-            [f"Proposal id: {proposal_id}", "Params"],
-            context.console,
-        )
+    if len(proposals) == 0:
+        context.info("No proposals found.")
+        return
+    render_pydantic_table(
+        [*proposals.values()], context.console, title="Proposals"
+    )
 
 
 @proposal_app.command()

@@ -6,6 +6,8 @@ from typing import Any, Callable, Generic, Optional, Protocol, TypeVar
 
 import requests
 
+from torusdk.types import Proposal, ProposalUnwrapped
+
 
 def check_str(x: Any) -> str:
     assert isinstance(x, str)
@@ -90,12 +92,14 @@ def get_json_from_cid(cid: str) -> dict[Any, Any] | None:
         return None
 
 
-def convert_cid_on_proposal(proposals: dict[int, dict[str, Any]]):
-    unwrapped: dict[int, dict[str, Any]] = {}
+def convert_cid_on_proposal(
+    proposals: dict[int, Proposal]
+) -> dict[int, ProposalUnwrapped]:
+    unwrapped: dict[int, ProposalUnwrapped] = {}
     for prop_id, proposal in proposals.items():
-        data = proposal.get("data")
-        if data and "Custom" in data:
-            metadata = proposal["metadata"]
+        data = proposal.data
+        if data and "GlobalCustom" in data:
+            metadata = proposal.metadata
             cid = metadata.split("ipfs://")[-1]
             queried_cid = get_json_from_cid(cid)
             if queried_cid:
@@ -105,8 +109,13 @@ def convert_cid_on_proposal(proposals: dict[int, dict[str, Any]]):
                         queried_cid["body"] = json.loads(body)
                     except Exception:
                         pass
-            proposal["Custom"] = queried_cid
-        unwrapped[prop_id] = proposal
+            unwrapped[prop_id] = ProposalUnwrapped(
+                **proposal.model_dump(), custom=queried_cid
+            )
+        else:
+            unwrapped[prop_id] = ProposalUnwrapped(
+                **proposal.model_dump(), custom=None
+            )
     return unwrapped
 
 
