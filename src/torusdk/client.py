@@ -21,9 +21,9 @@ from torusdk.types import (
     Agent,
     AgentApplication,
     NetworkParams,
+    Proposal,
     Ss58Address,
     SubnetParams,
-    Proposal,
 )
 
 # TODO: InsufficientBalanceError, MismatchedLengthError etc
