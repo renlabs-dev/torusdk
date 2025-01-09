@@ -42,6 +42,7 @@ def params(ctx: Context):
 
     with context.progress_status("Getting global network params ..."):
         global_params = get_global_params(client)
+    global_params = global_params.model_dump()
     printable_params = tranform_network_params(global_params)
     print_table_from_plain_dict(
         printable_params, ["Global params", "Value"], context.console
@@ -61,7 +62,7 @@ def registration_burn(
     client = context.com_client()
 
     burn = client.get_burn()
-    registration_cost = c_balance.from_nano(burn)
+    registration_cost = c_balance.from_rems(burn)
     context.info(
         f"The cost to register on a netuid: {netuid} is: {registration_cost} $TORUS"
     )

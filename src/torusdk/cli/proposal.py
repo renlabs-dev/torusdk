@@ -1,23 +1,29 @@
 import re
-from typing import Optional
+from typing import Optional, Union
 
 import typer
 from rich.progress import track
 from typer import Context
 
 from torusdk._common import IPFS_REGEX
-from torusdk.balance import to_nano
+from torusdk.balance import to_rems
 from torusdk.cli._common import (
     CustomCtx,
     make_custom_context,
-    print_table_from_plain_dict,
+    render_pydantic_table,
 )
 from torusdk.client import TorusClient
 from torusdk.key import local_key_adresses
-from torusdk.misc import (
-    local_keys_to_stakedbalance,
+from torusdk.misc import local_keys_to_stakedbalance, get_global_params
+from torusdk.types.types import OptionalNetworkParams
+from torusdk.types.proposal import (
+    Proposal,
+    GlobalCustom,
+    GlobalParams,
+    Emission,
 )
 from torusdk.util import convert_cid_on_proposal
+from torusdk.cli._common import merge_models
 
 proposal_app = typer.Typer(no_args_is_help=True)
 
@@ -119,16 +125,24 @@ def list_proposals(ctx: Context, query_cid: bool = typer.Option(True)):
         except IndexError:
             context.info("No proposals found.")
             return
+    parsed_proposals = [*map(Proposal.model_validate, proposals.values())]
+    custom_p = [
+        *filter(lambda x: isinstance(x.data, GlobalCustom), parsed_proposals)
+    ]
+    global_params_p = [
+        *filter(lambda x: isinstance(x.data, GlobalParams), parsed_proposals)
+    ]
+    emission_p = [
+        *filter(lambda x: isinstance(x.data, Emission), parsed_proposals)
+    ]
 
-    for proposal_id, batch_proposal in proposals.items():
-        status = batch_proposal["status"]
-        if isinstance(status, dict):
-            batch_proposal["status"] = [*status.keys()][0]
-        print_table_from_plain_dict(
-            batch_proposal,
-            [f"Proposal id: {proposal_id}", "Params"],
-            context.console,
-        )
+    render_pydantic_table(
+        custom_p, context.console, "Custom Proposals", ["data"]
+    )
+    render_pydantic_table(
+        global_params_p, context.console, "Global Params Proposals"
+    )
+    render_pydantic_table(emission_p, context.console, "Emission Proposals")
 
 
 @proposal_app.command()
@@ -148,9 +162,50 @@ def transfer_dao_funds(
     ipfs_prefix = "ipfs://"
     cid = ipfs_prefix + cid_hash
 
-    nano_amount = to_nano(amount)
+    nano_amount = to_rems(amount)
     keypair = context.load_key(signer_key, None)
     dest = context.resolve_ss58(dest)
 
     client = context.com_client()
     client.add_transfer_dao_treasury_proposal(keypair, cid, nano_amount, dest)
+
+
+@proposal_app.command()
+def propose_globally(
+    ctx: Context,
+    key: str,
+    cid: str,
+    max_name_length: Optional[int] = None,
+    min_name_length: Optional[int] = None,
+    max_allowed_agents: Optional[int] = None,
+    max_allowed_weights: Optional[int] = None,
+    min_weight_stake: Optional[int] = None,
+    min_weight_control_fee: Optional[int] = None,
+    min_staking_fee: Optional[int] = None,
+    dividends_participation_weight: Optional[int] = None,
+    proposal_cost: Optional[int] = None,
+):
+    local_variables = locals()
+    proposal_args = OptionalNetworkParams.model_validate(local_variables)
+
+    context = make_custom_context(ctx)
+    client = context.com_client()
+    global_params = get_global_params(client)
+    proposal = merge_models(global_params, proposal_args)
+
+    kp = context.load_key(key)
+    cid_hash = re.match(IPFS_REGEX, cid)
+    if not cid_hash:
+        context.error(f"CID provided is invalid: {cid}")
+        raise typer.Exit(code=1)
+    client.add_global_proposal(kp, proposal, cid)
+
+
+@proposal_app.command()
+def propose_emission(
+    ctx: Context,
+    key: str,
+    recycling_percentage: Optional[int],
+    treasury_percentage: Optional[int],
+):
+    pass

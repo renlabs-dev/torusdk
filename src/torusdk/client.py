@@ -15,12 +15,11 @@ from torustrateinterface.storage import StorageKey
 
 from torusdk._common import transform_stake_dmap
 from torusdk.errors import ChainTransactionError, NetworkQueryError
-from torusdk.types import (
+from torusdk.types.types import (
     Agent,
     AgentApplication,
-    NetworkParams,
+    GlobalParams,
     Ss58Address,
-    SubnetParams,
 )
 
 # TODO: InsufficientBalanceError, MismatchedLengthError etc
@@ -1374,45 +1373,6 @@ class TorusClient:
         )
         return response
 
-    def update_subnet(
-        self,
-        key: Keypair,
-        params: SubnetParams,
-        netuid: int = 0,
-    ) -> ExtrinsicReceipt:
-        """
-        Update a subnet's configuration.
-
-        It requires the founder key for authorization.
-
-        Args:
-            key: The founder keypair of the subnet.
-            params: The new parameters for the subnet.
-            netuid: The network identifier.
-
-        Returns:
-            A receipt of the subnet update transaction.
-
-        Raises:
-            AuthorizationError: If the key is not authorized.
-            ChainTransactionError: If the transaction fails.
-        """
-
-        general_params = dict(params)
-        general_params["netuid"] = netuid
-        if general_params.get("subnet_metadata") is None:
-            general_params["metadata"] = None
-        else:
-            general_params["metadata"] = general_params["subnet_metadata"]
-
-        response = self.compose_call(
-            fn="update_subnet",
-            params=general_params,
-            key=key,
-        )
-
-        return response
-
     def transfer_stake(
         self,
         key: Keypair,
@@ -1715,7 +1675,7 @@ class TorusClient:
     def add_global_proposal(
         self,
         key: Keypair,
-        params: NetworkParams,
+        params: GlobalParams,
         cid: str | None,
     ) -> ExtrinsicReceipt:
         """
@@ -1958,9 +1918,10 @@ class TorusClient:
         Raises:
             QueryError: If the query to the network fails or is invalid.
         """
+        storage = "Proposals"
         prop = self.query_map(
-            "Proposals", extract_value=extract_value, module="Governance"
-        )["Proposals"]
+            storage, extract_value=extract_value, module="Governance"
+        ).get(storage, {})
         return prop
 
     def query_map_weights(

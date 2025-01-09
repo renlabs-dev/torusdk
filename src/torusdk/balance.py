@@ -4,7 +4,7 @@ DECIMALS = 18
 UNIT_NAME = "Toids"
 
 
-def from_nano(amount: int) -> float:
+def from_rems(amount: int) -> float:
     """
     Converts from nano to j
     """
@@ -12,12 +12,20 @@ def from_nano(amount: int) -> float:
     return amount / (10**DECIMALS)
 
 
-def to_nano(amount: float) -> int:
+def to_rems(amount: float) -> int:
     """
     Converts from j to nano
     """
 
     return int(amount * (10**DECIMALS))
+
+
+class Rem(int):
+    def __new__(cls, value: int):
+        return super().__new__(cls, value)
+
+    def __mul__(self, other: int):
+        return Rem(super().__mul__(other))
 
 
 def from_horus(amount: int, subnet_tempo: int = 100) -> float:
@@ -35,7 +43,10 @@ def repr_j(amount: int):
     E.g. "103.2J".
     """
 
-    return f"{from_nano(amount)} {UNIT_NAME}"
+    return f"{from_rems(amount)} {UNIT_NAME}"
+
+
+breakpoint()
 
 
 T = TypeVar("T", str, int)

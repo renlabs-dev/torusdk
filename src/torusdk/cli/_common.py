@@ -13,11 +13,11 @@ from torustrateinterface import Keypair
 from typer import Context
 
 from torusdk._common import TorusSettings, get_node_url
-from torusdk.balance import dict_from_nano, from_nano
+from torusdk.balance import dict_from_nano, from_rems
 from torusdk.client import TorusClient
 from torusdk.errors import InvalidPasswordError, PasswordNotProvidedError
 from torusdk.key import load_keypair, resolve_key_ss58
-from torusdk.types import (
+from torusdk.types.types import (
     AgentInfoWithOptionalBalance,
     Ss58Address,
 )
@@ -37,6 +37,19 @@ KEY_DEPRECATION_WARNING = (
     "using the `torus key migrate [key]` command.\n"
 )
 KEY_DEPRECATION_STYLE = f"{typer.colors.RED} bold on yellow"
+
+
+T = TypeVar("T", bound=BaseModel)
+
+
+def merge_models(model_a: T, model_b: BaseModel) -> T:
+    dict_a = model_a.model_dump()
+    dict_b = model_b.model_dump(exclude_unset=True)
+    unoptional_dict = {
+        key: value for key, value in dict_b.items() if value is not None
+    }
+    merged_dict = {**dict_a, **unoptional_dict}
+    return model_a.__class__(**merged_dict)
 
 
 @dataclass
@@ -250,11 +263,11 @@ def print_table_from_plain_dict(
     console.print(table)
 
 
-T = TypeVar("T", bound=BaseModel)
-
-
 def render_pydantic_table(
-    objects: list[T], console: Console, title: str = ""
+    objects: list[T],
+    console: Console,
+    title: str = "",
+    ignored_columns: list[str] = [],
 ) -> None:
     """
     Renders a rich table from a list of Pydantic objects.
@@ -267,14 +280,23 @@ def render_pydantic_table(
     if not objects:
         return
 
-    table = Table(title=title, show_header=True, header_style="bold magenta")
+    table = Table(
+        title=title,
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold magenta",
+    )
 
     for field_name, _ in objects[0].model_fields.items():
+        if field_name in ignored_columns:
+            continue
         table.add_column(field_name, style="white", vertical="middle")
 
     for obj in objects:
         row_data: list[str | Table] = []
         for field_name, _ in obj.model_fields.items():
+            if field_name in ignored_columns:
+                continue
             value = getattr(obj, field_name)
             if isinstance(value, BaseModel):
                 subtable = Table(
@@ -291,6 +313,7 @@ def render_pydantic_table(
         table.add_row(*row_data)
 
     console.print(table)
+    console.print("\n")
 
 
 def print_table_standardize(
@@ -326,9 +349,9 @@ def transform_module_into(
 
         for key in to_exclude:
             del module[key]
-        module["stake"] = round(from_nano(module["stake"]), 2)  # type: ignore
+        module["stake"] = round(from_rems(module["stake"]), 2)  # type: ignore
         if module.get("balance") is not None:
-            module["balance"] = from_nano(module["balance"])  # type: ignore
+            module["balance"] = from_rems(module["balance"])  # type: ignore
         else:
             # user should not see None values
             del module["balance"]

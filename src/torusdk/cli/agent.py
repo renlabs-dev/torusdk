@@ -4,7 +4,7 @@ import typer
 from typer import Context
 
 from torusdk._common import intersection_update
-from torusdk.balance import from_nano
+from torusdk.balance import from_rems
 from torusdk.cli._common import (
     HIDE_FEATURES,
     make_custom_context,
@@ -89,7 +89,7 @@ def add_application(
     application_addr = context.resolve_ss58(application_key)
     application_burn = get_governance_config(client).agent_application_cost
     confirm = context.confirm(
-        f"{from_nano(application_burn)} tokens will be burned. Do you want to continue?"
+        f"{from_rems(application_burn)} tokens will be burned. Do you want to continue?"
     )
     if not confirm:
         context.info("Application addition cancelled")

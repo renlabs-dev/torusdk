@@ -16,7 +16,7 @@ from torusdk.encryption import (
 )
 from torusdk.errors import PasswordNotProvidedError
 from torusdk.password import NoPassword, PasswordProvider
-from torusdk.types import Ss58Address
+from torusdk.types.types import Ss58Address
 from torusdk.util import bytes_to_hex
 
 TORUS_KEY_VERSION = 1

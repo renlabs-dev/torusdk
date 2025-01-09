@@ -4,7 +4,7 @@ import typer
 from typer import Context
 
 from torusdk._common import BalanceUnit, format_balance
-from torusdk.balance import from_nano
+from torusdk.balance import from_rems
 from torusdk.cli._common import (
     HIDE_FEATURES,
     make_custom_context,
@@ -13,7 +13,7 @@ from torusdk.cli._common import (
 from torusdk.client import TorusClient
 from torusdk.key import local_key_adresses
 from torusdk.misc import get_map_modules
-from torusdk.types import Ss58Address
+from torusdk.types.types import Ss58Address
 
 misc_app = typer.Typer(no_args_is_help=True)
 
@@ -72,7 +72,7 @@ def apr(ctx: Context, fee: int = 0):
         unit_emission = client.get_unit_emission()
         total_staked_tokens = client.query("TotalStake")
     # 50% of the total emission goes to stakers
-    daily_token_rewards = blocks_in_a_day * from_nano(unit_emission) / 2
+    daily_token_rewards = blocks_in_a_day * from_rems(unit_emission) / 2
     _apr = (
         (daily_token_rewards * (1 - fee_to_float) * 365)
         / total_staked_tokens

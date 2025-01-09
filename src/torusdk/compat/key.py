@@ -21,7 +21,7 @@ from torusdk.errors import (
 )
 from torusdk.key import check_ss58_address, is_ss58_address, store_key
 from torusdk.password import NoPassword, PasswordProvider
-from torusdk.types import Ss58Address
+from torusdk.types.types import Ss58Address
 from torusdk.util import bytes_to_hex, check_str
 
 

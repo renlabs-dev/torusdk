@@ -4,7 +4,7 @@ import typer
 from typer import Context
 
 from torusdk._common import BalanceUnit, format_balance
-from torusdk.balance import to_nano
+from torusdk.balance import to_rems
 from torusdk.cli._common import (
     NOT_IMPLEMENTED_MESSAGE,
     make_custom_context,
@@ -119,7 +119,7 @@ def transfer(ctx: Context, key: str, amount: float, dest: str):
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    nano_amount = to_nano(amount)
+    nano_amount = to_rems(amount)
 
     resolved_key = context.load_key(key, None)
     resolved_dest = context.resolve_ss58(dest)
@@ -150,7 +150,7 @@ def transfer_stake(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    nano_amount = to_nano(amount)
+    nano_amount = to_rems(amount)
     keypair = context.load_key(key, None)
     resolved_from = context.resolve_ss58(from_key)
     resolved_dest = context.resolve_ss58(dest)
@@ -184,7 +184,7 @@ def stake(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    nano_amount = to_nano(amount)
+    nano_amount = to_rems(amount)
     keypair = context.load_key(key, None)
     resolved_dest = context.resolve_ss58(dest)
 
@@ -215,7 +215,7 @@ def unstake(ctx: Context, key: str, amount: float, dest: str):
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    nano_amount = to_nano(amount)
+    nano_amount = to_rems(amount)
     keypair = context.load_key(key, None)
     resolved_dest = context.resolve_ss58(dest)
 

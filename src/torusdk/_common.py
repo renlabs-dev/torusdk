@@ -8,8 +8,8 @@ from typing import Any, Callable, Mapping, TypeVar
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from torusdk.balance import from_nano
-from torusdk.types import Ss58Address
+from torusdk.balance import from_rems
+from torusdk.types.types import Ss58Address
 
 IPFS_REGEX = re.compile(r"^Qm[1-9A-HJ-NP-Za-km-z]{44}$")
 SS58_FORMAT = 42
@@ -82,7 +82,7 @@ def format_balance(balance: int, unit: BalanceUnit = BalanceUnit.nano) -> str:
         case BalanceUnit.nano | BalanceUnit.n:
             return f"{balance}"
         case BalanceUnit.joule | BalanceUnit.j:
-            in_joules = from_nano(balance)
+            in_joules = from_rems(balance)
             round_joules = round(in_joules, 4)
             return f"{round_joules:,}" + " \u2653"
 
