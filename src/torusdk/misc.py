@@ -4,12 +4,13 @@ from typing import Any, TypeVar
 from torusdk._common import transform_stake_dmap
 from torusdk.client import TorusClient
 from torusdk.key import check_ss58_address
+from torusdk.types.proposal import Emission
 from torusdk.types.types import (
     Agent,
     AgentInfoWithOptionalBalance,
     GlobalGovernanceConfig,
-    MinFee,
     GlobalParams,
+    MinFee,
     Ss58Address,
 )
 
@@ -105,6 +106,26 @@ def get_governance_config(c_client: TorusClient):
         }
     )["GlobalGovernanceConfig"]
     return GlobalGovernanceConfig.model_validate(governance_config)
+
+
+def get_emission_params(c_client: TorusClient):
+    query_all = c_client.query_batch(
+        {
+            "Emission0": [
+                ("EmissionRecyclingPercentage", []),
+            ],
+            "Governance": [
+                ("TreasuryEmissionFee", []),
+            ],
+        }
+    )
+    raw_emission = {
+        "recycling_percentage": query_all["EmissionRecyclingPercentage"],
+        "treasury_percentage": query_all["TreasuryEmissionFee"],
+    }
+    emission_params = Emission.model_validate(raw_emission)
+
+    return emission_params
 
 
 def get_global_params(c_client: TorusClient):

@@ -3,8 +3,7 @@ from typing import Optional
 import typer
 from typer import Context
 
-from torusdk._common import BalanceUnit, format_balance
-from torusdk.balance import to_rems
+from torusdk.balance import BalanceUnit, format_balance, to_rems
 from torusdk.cli._common import (
     NOT_IMPLEMENTED_MESSAGE,
     make_custom_context,

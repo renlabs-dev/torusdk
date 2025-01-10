@@ -15,6 +15,7 @@ from torustrateinterface.storage import StorageKey
 
 from torusdk._common import transform_stake_dmap
 from torusdk.errors import ChainTransactionError, NetworkQueryError
+from torusdk.types.proposal import Emission
 from torusdk.types.types import (
     Agent,
     AgentApplication,
@@ -1708,6 +1709,43 @@ class TorusClient:
         response = self.compose_call(
             fn="add_global_params_proposal",
             params=general_params,
+            key=key,
+            module="Governance",
+        )
+
+        return response
+
+    def add_emission_proposal(
+        self,
+        key: Keypair,
+        params: Emission,
+        cid: str,
+    ):
+        """
+        Submits a proposal for altering the emission parameters of the network.
+
+        Allows for the submission of a proposal to change the emission
+        parameters of the network, such as the block reward, emission curve,
+        and other emission-related settings.
+
+        Args:
+            key: The keypair used for signing the proposal transaction.
+            params: A dictionary containing emission parameters like the block
+                reward, emission curve, and other emission-related settings.
+
+        Returns:
+            A receipt of the emission proposal transaction.
+
+        Raises:
+            InvalidParameterError: If the provided emission parameters are invalid.
+            ChainTransactionError: If the transaction fails.
+        """
+
+        raw_emission = params.model_dump()
+        emission_params = {"data": cid, **raw_emission}
+        response = self.compose_call(
+            fn="add_emission_proposal",
+            params=emission_params,
             key=key,
             module="Governance",
         )

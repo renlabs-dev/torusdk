@@ -8,7 +8,8 @@ from torustrateinterface import Keypair
 from typeguard import check_type
 from typer import Context
 
-from torusdk._common import SS58_FORMAT, BalanceUnit, format_balance
+from torusdk._common import SS58_FORMAT
+from torusdk.balance import BalanceUnit, format_balance
 from torusdk.cli._common import (
     make_custom_context,
     print_table_from_plain_dict,

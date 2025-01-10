@@ -2,21 +2,15 @@ import random
 import re
 import warnings
 from collections import defaultdict
-from enum import Enum
 from typing import Any, Callable, Mapping, TypeVar
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from torusdk.balance import from_rems
 from torusdk.types.types import Ss58Address
 
 IPFS_REGEX = re.compile(r"^Qm[1-9A-HJ-NP-Za-km-z]{44}$")
 SS58_FORMAT = 42
-
-
-def extract_ipfs():
-    pass
 
 
 def deprecated(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -64,27 +58,6 @@ def get_available_nodes(
         case False:
             node_urls = torus_settings.NODE_URLS
     return node_urls
-
-
-class BalanceUnit(str, Enum):
-    joule = "rems"
-    j = "r"
-    nano = "torus"
-    n = "t"
-
-
-def format_balance(balance: int, unit: BalanceUnit = BalanceUnit.nano) -> str:
-    """
-    Formats a balance.
-    """
-
-    match unit:
-        case BalanceUnit.nano | BalanceUnit.n:
-            return f"{balance}"
-        case BalanceUnit.joule | BalanceUnit.j:
-            in_joules = from_rems(balance)
-            round_joules = round(in_joules, 4)
-            return f"{round_joules:,}" + " \u2653"
 
 
 K = TypeVar("K")

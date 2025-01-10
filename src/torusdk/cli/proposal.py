@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Union
+from typing import Optional
 
 import typer
 from rich.progress import track
@@ -9,21 +9,29 @@ from torusdk._common import IPFS_REGEX
 from torusdk.balance import to_rems
 from torusdk.cli._common import (
     CustomCtx,
+    extract_cid,
+    input_to_rems,
     make_custom_context,
+    merge_models,
     render_pydantic_table,
 )
 from torusdk.client import TorusClient
 from torusdk.key import local_key_adresses
-from torusdk.misc import local_keys_to_stakedbalance, get_global_params
-from torusdk.types.types import OptionalNetworkParams
+from torusdk.misc import (
+    get_emission_params,
+    get_global_params,
+    local_keys_to_stakedbalance,
+)
 from torusdk.types.proposal import (
-    Proposal,
+    Emission,
     GlobalCustom,
     GlobalParams,
-    Emission,
+    OptionalEmission,
+    Proposal,
+    TransferDaoTreasury,
 )
+from torusdk.types.types import OptionalNetworkParams
 from torusdk.util import convert_cid_on_proposal
-from torusdk.cli._common import merge_models
 
 proposal_app = typer.Typer(no_args_is_help=True)
 
@@ -135,7 +143,11 @@ def list_proposals(ctx: Context, query_cid: bool = typer.Option(True)):
     emission_p = [
         *filter(lambda x: isinstance(x.data, Emission), parsed_proposals)
     ]
-
+    transfer_p = [
+        *filter(
+            lambda x: isinstance(x.data, TransferDaoTreasury), parsed_proposals
+        )
+    ]
     render_pydantic_table(
         custom_p, context.console, "Custom Proposals", ["data"]
     )
@@ -143,6 +155,7 @@ def list_proposals(ctx: Context, query_cid: bool = typer.Option(True)):
         global_params_p, context.console, "Global Params Proposals"
     )
     render_pydantic_table(emission_p, context.console, "Emission Proposals")
+    render_pydantic_table(transfer_p, context.console, "Transfer Proposals")
 
 
 @proposal_app.command()
@@ -150,17 +163,10 @@ def transfer_dao_funds(
     ctx: Context,
     signer_key: str,
     amount: float,
-    cid_hash: str,
     dest: str,
+    cid: str = typer.Argument(..., callback=extract_cid),
 ):
     context = make_custom_context(ctx)
-
-    if not re.match(IPFS_REGEX, cid_hash):
-        context.error(f"CID provided is invalid: {cid_hash}")
-        raise typer.Exit(code=1)
-
-    ipfs_prefix = "ipfs://"
-    cid = ipfs_prefix + cid_hash
 
     nano_amount = to_rems(amount)
     keypair = context.load_key(signer_key, None)
@@ -174,16 +180,20 @@ def transfer_dao_funds(
 def propose_globally(
     ctx: Context,
     key: str,
-    cid: str,
+    cid_hash: str = typer.Argument(..., callback=extract_cid),
     max_name_length: Optional[int] = None,
     min_name_length: Optional[int] = None,
     max_allowed_agents: Optional[int] = None,
     max_allowed_weights: Optional[int] = None,
     min_weight_stake: Optional[int] = None,
     min_weight_control_fee: Optional[int] = None,
-    min_staking_fee: Optional[int] = None,
+    min_staking_fee: Optional[float] = typer.Argument(
+        ..., callback=input_to_rems
+    ),
     dividends_participation_weight: Optional[int] = None,
-    proposal_cost: Optional[int] = None,
+    proposal_cost: Optional[float] = typer.Argument(
+        ..., callback=input_to_rems
+    ),
 ):
     local_variables = locals()
     proposal_args = OptionalNetworkParams.model_validate(local_variables)
@@ -194,18 +204,23 @@ def propose_globally(
     proposal = merge_models(global_params, proposal_args)
 
     kp = context.load_key(key)
-    cid_hash = re.match(IPFS_REGEX, cid)
-    if not cid_hash:
-        context.error(f"CID provided is invalid: {cid}")
-        raise typer.Exit(code=1)
-    client.add_global_proposal(kp, proposal, cid)
+    client.add_global_proposal(kp, proposal, cid_hash)
 
 
 @proposal_app.command()
 def propose_emission(
     ctx: Context,
     key: str,
-    recycling_percentage: Optional[int],
-    treasury_percentage: Optional[int],
+    cid: str = typer.Argument(..., callback=extract_cid),
+    recycling_percentage: Optional[int] = typer.Option(None),
+    treasury_percentage: Optional[int] = typer.Option(None),
 ):
-    pass
+    local_variables = locals()
+    proposal_args = OptionalEmission.model_validate(local_variables)
+
+    context = make_custom_context(ctx)
+    client = context.com_client()
+    emission_params = get_emission_params(client)
+    proposal = merge_models(emission_params, proposal_args)
+    kp = context.load_key(key)
+    client.add_emission_proposal(kp, proposal, cid)

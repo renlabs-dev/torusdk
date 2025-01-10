@@ -1,7 +1,14 @@
-from typing import Protocol, Union, Any, cast, Literal
-from pydantic import BaseModel, Field, RootModel, model_validator
-from torusdk.types.types import Ss58Address, GlobalParams
-from typing_extensions import Self
+from typing import Any, Literal, Union, cast
+
+from pydantic import (
+    BaseModel,
+    Field,
+    RootModel,
+    field_validator,
+    model_validator,
+)
+
+from torusdk.types.types import GlobalParams, Rem, Ss58Address, instantiate_rem
 
 
 class ProposalOpen(BaseModel):
@@ -40,7 +47,17 @@ class ProposalStatus(
 
 class TransferDaoTreasury(BaseModel):
     account: Ss58Address
-    amount: int
+    amount: Rem = Field(..., init=True)
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    to_rem = field_validator("amount", mode="before")(instantiate_rem)
+
+
+class OptionalEmission(BaseModel):
+    recycling_percentage: int | None = Field(..., ge=0, le=100)
+    treasury_percentage: int | None = Field(..., ge=0, le=100)
 
 
 class Emission(BaseModel):
@@ -67,9 +84,12 @@ class Proposal(BaseModel):
     expiration_block: int
     status: ProposalAccepted | ProposalRefused | ProposalOpen | ProposalExpired
     metadata: str
-    proposal_cost: int
+    proposal_cost: Rem = Field(...)
     creation_block: int
     data: Union[GlobalParams, Emission, TransferDaoTreasury, GlobalCustom]
+
+    class Config:
+        arbitrary_types_allowed = True
 
     # TODO: find a better way to do this and remove this cursed thing
     @model_validator(mode="before")
@@ -93,6 +113,8 @@ class Proposal(BaseModel):
     @classmethod
     def fix_status(cls, data: Any) -> Any:
         return extract_value(data, "status")
+
+    to_rem = field_validator("proposal_cost", mode="before")(instantiate_rem)
 
 
 def extract_value(data: Any, key_to_extract: str):

@@ -3,9 +3,11 @@ Common types for the torus module.
 """
 
 from enum import Enum
-from typing import NewType, TypedDict
+from typing import Any, NewType, TypedDict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+
+from torusdk.balance import BalanceUnit, format_balance, from_rems, to_rems
 
 Ss58Address = NewType("Ss58Address", str)
 """Substrate SS58 address.
@@ -165,3 +167,61 @@ class AgentInfoWithBalance(AgentInfo):
 
 class AgentInfoWithOptionalBalance(AgentInfo):
     balance: int | None
+
+
+class Rem:
+    def __init__(self, value: int):
+        self.value = value
+
+    def __str__(self):
+        return format_balance(self.value, BalanceUnit.j)
+
+    def __repr__(self):
+        return format_balance(self.value, BalanceUnit.j)
+
+    def to_torus(self):
+        return from_rems(self.value)
+
+    @classmethod
+    def from_torus(cls, torus: float):
+        return cls(to_rems(torus))
+
+    def __add__(self, other: "Rem"):
+        return Rem(self.value + other.value)
+
+    def __sub__(self, other: "Rem"):
+        return Rem(self.value - other.value)
+
+    def __mul__(self, other: "Rem | int | float"):
+        if isinstance(other, Rem):
+            return Rem(self.value * other.value)
+        return Rem(int(self.value * other))
+
+    def __truediv__(self, other: "Rem | int | float"):
+        if isinstance(other, Rem):
+            return Rem(int(self.value / other.value))
+        return Rem(int(self.value / other))
+
+    def __floordiv__(self, other: "Rem | int | float"):
+        if isinstance(other, Rem):
+            return Rem(self.value // other.value)
+        return Rem(int(self.value // other))
+
+    def __mod__(self, other: "Rem | int | float"):
+        if isinstance(other, Rem):
+            return Rem(self.value % other.value)
+        return Rem(int(self.value % other))
+
+    def __pow__(self, other: "Rem | int | float"):
+        if isinstance(other, Rem):
+            return Rem(self.value**other.value)
+        return Rem(self.value**other)
+
+
+def instantiate_rem(value: Any) -> Rem:
+    if isinstance(value, int):
+        return Rem(value)
+    elif isinstance(value, Rem):
+        return value
+    else:
+        raise ValidationError(f"Invalid value for Rem field: {value}")

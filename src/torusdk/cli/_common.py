@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from getpass import getpass
 from typing import Any, Callable, Mapping, TypeVar, cast
@@ -12,8 +13,8 @@ from rich.table import Table
 from torustrateinterface import Keypair
 from typer import Context
 
-from torusdk._common import TorusSettings, get_node_url
-from torusdk.balance import dict_from_nano, from_rems
+from torusdk._common import IPFS_REGEX, TorusSettings, get_node_url
+from torusdk.balance import dict_from_nano, from_rems, to_rems
 from torusdk.client import TorusClient
 from torusdk.errors import InvalidPasswordError, PasswordNotProvidedError
 from torusdk.key import load_keypair, resolve_key_ss58
@@ -50,6 +51,19 @@ def merge_models(model_a: T, model_b: BaseModel) -> T:
     }
     merged_dict = {**dict_a, **unoptional_dict}
     return model_a.__class__(**merged_dict)
+
+
+def extract_cid(value: str):
+    cid_hash = re.match(IPFS_REGEX, value)
+    if not cid_hash:
+        raise typer.BadParameter(f"CID provided is invalid: {value}")
+    return cid_hash.group()
+
+
+def input_to_rems(value: float | None):
+    if value is None:
+        return None
+    return to_rems(value)
 
 
 @dataclass

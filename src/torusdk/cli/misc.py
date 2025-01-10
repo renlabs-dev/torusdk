@@ -3,8 +3,7 @@ from typing import cast
 import typer
 from typer import Context
 
-from torusdk._common import BalanceUnit, format_balance
-from torusdk.balance import from_rems
+from torusdk.balance import BalanceUnit, format_balance, from_rems
 from torusdk.cli._common import (
     HIDE_FEATURES,
     make_custom_context,
