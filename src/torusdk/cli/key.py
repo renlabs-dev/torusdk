@@ -27,6 +27,7 @@ from torusdk.key import (
     local_key_adresses,
     store_key,
     to_pydantic,
+    key_name_exists,
 )
 from torusdk.misc import (
     local_keys_allbalance,
@@ -44,11 +45,23 @@ class SortBalance(str, Enum):
 
 
 @key_app.command()
-def create(ctx: Context, name: str, password: str = typer.Option(None)):
+def create(
+    ctx: Context,
+    name: str,
+    password: str = typer.Option(None),
+):
     """
     Generates a new key and stores it on a disk with the given name.
     """
     context = make_custom_context(ctx)
+
+
+    if key_name_exists(name):
+        context.info(f"WARNING! Key '{name}' already exists", style="bold")
+        if not context.confirm("Are you sure you want to override it?"):
+            raise typer.Abort()
+
+        context.info(f"overriding...")
 
     keypair = generate_keypair()
     address = keypair.ss58_address
