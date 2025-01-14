@@ -211,7 +211,6 @@ def inventory(
 
     total = len(key_to_address)
 
-    # print total rows
     context.info(f"{total} row{'s' if total != 1 else ''}.")
 
 
