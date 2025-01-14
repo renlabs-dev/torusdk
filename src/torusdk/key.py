@@ -60,6 +60,10 @@ def local_key_adresses(
 
     key_dir = os.path.expanduser(os.path.join(TORUS_HOME, "key"))
     key_dir = Path(key_dir)
+
+    if not key_dir.exists():
+        return {}
+
     key_names = [
         f.stem
         for f in key_dir.iterdir()
