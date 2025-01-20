@@ -110,7 +110,7 @@ def classic_put(
     ensure_parent_dir_exists(full_path)
 
     if password:
-        value = encrypt_data(password, value)
+        value, _ = encrypt_data(password, value)
         encrypted = True
     else:
         encrypted = False

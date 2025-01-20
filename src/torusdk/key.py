@@ -1,5 +1,6 @@
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from time import time
 from typing import TypeGuard
@@ -35,14 +36,20 @@ class TorusKey(BaseModel):
     mnemonic: str | None
 
 
+@dataclass
+class EncryptionMetadata:
+    kdf: str
+    cipher: str
+    cipher_text: str
+    nonce_size: int
+
+
 class TorusStorage(TorusKey):
     version: int
     encrypted: bool
     timestamp: int
     mnemonic_present: bool
-
-    def decrypt_data(self):
-        pass
+    encryption_metadata: EncryptionMetadata | None
 
 
 def local_key_adresses(
@@ -313,18 +320,26 @@ def store_key(keypair: Keypair, name: str, password: str | None = None) -> None:
     is_mnemonic = keypair.mnemonic is not None
     if password is not None:
         if data.seed_hex:
-            data.seed_hex = encrypt_data(password, data.seed_hex)
-        data.private_key = encrypt_data(password, data.private_key)
+            data.seed_hex, _ = encrypt_data(password, data.seed_hex)
         if data.mnemonic:
-            data.mnemonic = encrypt_data(password, data.mnemonic)
+            data.mnemonic, _ = encrypt_data(password, data.mnemonic)
+        data.private_key, nonce_size = encrypt_data(password, data.private_key)
         encrypted = True
+        encryption_metadata = EncryptionMetadata(
+            kdf="blake2b",
+            cipher="xsalsa20-poly1305",
+            cipher_text="base64",
+            nonce_size=nonce_size,
+        )
     else:
         encrypted = False
+        encryption_metadata = None
     storage_obj = TorusStorage(
         version=1,
         encrypted=encrypted,
         mnemonic_present=is_mnemonic,
         timestamp=int(time()),
+        encryption_metadata=encryption_metadata,
         **data.model_dump(),
     )
     with open(path, "w") as file:

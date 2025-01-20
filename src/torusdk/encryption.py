@@ -17,7 +17,7 @@ def derive_key(password: str):
     return key
 
 
-def encrypt_data(password: str, data: Any) -> str:
+def encrypt_data(password: str, data: Any) -> tuple[str, int]:
     key = derive_key(password)
     box = SecretBox(key)
     nonce = random(SecretBox.NONCE_SIZE)
@@ -25,7 +25,7 @@ def encrypt_data(password: str, data: Any) -> str:
     ciphertext = box.encrypt(raw, nonce).ciphertext
     encrypted = nonce + ciphertext
     decoded_data = base64.b64encode(encrypted).decode()
-    return decoded_data
+    return decoded_data, SecretBox.NONCE_SIZE
 
 
 def decrypt_data(password: str, data: str) -> Any:
