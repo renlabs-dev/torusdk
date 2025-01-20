@@ -217,9 +217,14 @@ def inventory(
     general_key_to_address: dict[str, str] = cast(
         dict[str, str], key_to_address
     )
+
     print_table_from_plain_dict(
         general_key_to_address, ["Key", "Address"], context.console
     )
+
+    total = len(key_to_address)
+
+    context.info(f"{total} row{'s' if total != 1 else ''}.")
 
 
 @key_app.command()
