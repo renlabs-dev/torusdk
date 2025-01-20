@@ -302,6 +302,12 @@ def load_key_public(name: str) -> TorusStorage:
     stored_key = TorusStorage.model_validate(body)
     return stored_key
 
+def key_name_exists(name: str) -> bool:
+    """
+    Checks if a key with the given name exists.
+    """
+    path = key_path(name)
+    return os.path.exists(path)
 
 def store_key(keypair: Keypair, name: str, password: str | None = None) -> None:
     """
