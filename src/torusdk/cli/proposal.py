@@ -187,13 +187,19 @@ def propose_globally(
     max_allowed_weights: Optional[int] = None,
     min_weight_stake: Optional[int] = None,
     min_weight_control_fee: Optional[int] = None,
-    min_staking_fee: Optional[float] = typer.Argument(
-        ..., callback=input_to_rems
-    ),
+    proposal_expiration: Optional[int] = None,
+    agent_application_expiration: Optional[int] = None,
+    proposal_reward_treasury_allocation: Optional[int] = None,
+    max_proposal_reward_treasury_allocation: Optional[int] = None,
+    proposal_reward_interval: Optional[int] = None,
     dividends_participation_weight: Optional[int] = None,
-    proposal_cost: Optional[float] = typer.Argument(
-        ..., callback=input_to_rems
+    agent_application_cost: Optional[float] = typer.Option(
+        None, callback=input_to_rems
     ),
+    min_staking_fee: Optional[float] = typer.Option(
+        None, callback=input_to_rems
+    ),
+    proposal_cost: Optional[float] = typer.Option(None, callback=input_to_rems),
 ):
     local_variables = locals()
     proposal_args = OptionalNetworkParams.model_validate(local_variables)
@@ -205,6 +211,7 @@ def propose_globally(
 
     kp = context.load_key(key)
     client.add_global_proposal(kp, proposal, cid_hash)
+    context.info("Proposal added.")
 
 
 @proposal_app.command()

@@ -3,7 +3,7 @@ from typing import Any, Literal, Union, cast
 from pydantic import (
     BaseModel,
     Field,
-    RootModel,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -15,44 +15,78 @@ class ProposalOpen(BaseModel):
     # votes_for: list[Ss58Address]
     # votes_against: list[Ss58Address]
     status: Literal["Open"] = "Open"
-    stake_for: int
-    stake_against: int
+    stake_for: Rem
+    stake_against: Rem
+
+    @field_serializer("stake_for", "stake_against")
+    def from_rem(self, rem_value: Rem) -> int:
+        return rem_value.value
+
+    to_rem = field_validator("stake_for", "stake_against", mode="before")(
+        instantiate_rem
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class ProposalRefused(BaseModel):
     status: Literal["Refused"] = "Refused"
     block: int
-    stake_for: int
-    stake_against: int
+    stake_for: Rem
+    stake_against: Rem
+
+    @field_serializer(
+        "stake_for",
+        "stake_against",
+    )
+    def from_rem(self, rem_value: Rem) -> int:
+        return rem_value.value
+
+    to_rem = field_validator("stake_for", "stake_against", mode="before")(
+        instantiate_rem
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class ProposalAccepted(BaseModel):
     status: Literal["Accepted"] = "Accepted"
     block: int
-    stake_for: int
-    stake_against: int
+    stake_for: Rem
+    stake_against: Rem
+
+    @field_serializer("stake_for", "stake_against")
+    def from_rem(self, rem_value: Rem) -> int:
+        return rem_value.value
+
+    to_rem = field_validator("stake_for", "stake_against", mode="before")(
+        instantiate_rem
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class ProposalExpired(BaseModel):
     status: Literal["Expired"] = "Expired"
 
 
-class ProposalStatus(
-    RootModel[
-        ProposalOpen | ProposalRefused | ProposalAccepted | ProposalExpired
-    ]
-):
-    pass
-
-
 class TransferDaoTreasury(BaseModel):
     account: Ss58Address
     amount: Rem = Field(..., init=True)
 
+    to_rem = field_validator("amount", mode="before")(instantiate_rem)
+
+    @field_serializer(
+        "amount",
+    )
+    def from_rem(self, rem_value: Rem) -> int:
+        return rem_value.value
+
     class Config:
         arbitrary_types_allowed = True
-
-    to_rem = field_validator("amount", mode="before")(instantiate_rem)
 
 
 class OptionalEmission(BaseModel):
@@ -90,6 +124,12 @@ class Proposal(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+    @field_serializer(
+        "proposal_cost",
+    )
+    def from_rem(self, rem_value: Rem) -> int:
+        return rem_value.value
 
     # TODO: find a better way to do this and remove this cursed thing
     @model_validator(mode="before")

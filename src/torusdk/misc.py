@@ -164,10 +164,15 @@ def get_global_params(c_client: TorusClient):
         ),
         "max_allowed_weights": int(query_all["MaxAllowedWeights"]),
         "min_weight_control_fee": fees.min_weight_control_fee,
-        "min_weight_stake": 3,  # TODO: unhardcode it
         "min_staking_fee": fees.min_staking_fee,
         "proposal_cost": governance_config.proposal_cost,
         "min_stake_per_weight": query_all["MinStakePerWeight"],
+        "proposal_expiration": governance_config.proposal_expiration,
+        "agent_application_cost": governance_config.agent_application_cost,
+        "agent_application_expiration": governance_config.agent_application_expiration,
+        "proposal_reward_treasury_allocation": governance_config.proposal_reward_treasury_allocation,
+        "max_proposal_reward_treasury_allocation": governance_config.max_proposal_reward_treasury_allocation,
+        "proposal_reward_interval": governance_config.proposal_reward_interval,
     }
     global_params: GlobalParams = GlobalParams.model_validate(network_params)
     return global_params
