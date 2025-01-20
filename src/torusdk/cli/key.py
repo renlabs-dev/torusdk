@@ -24,10 +24,10 @@ from torusdk.key import (
     check_ss58_address,
     generate_keypair,
     is_ss58_address,
+    key_name_exists,
     local_key_adresses,
     store_key,
     to_pydantic,
-    key_name_exists,
 )
 from torusdk.misc import (
     local_keys_allbalance,
@@ -61,7 +61,7 @@ def create(
         if not context.confirm("Are you sure you want to override it?"):
             raise typer.Abort()
 
-        context.info(f"overriding...")
+        context.info("overriding...")
 
     keypair = generate_keypair()
     address = keypair.ss58_address
