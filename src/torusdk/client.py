@@ -2795,7 +2795,7 @@ class TorusClient:
 
         return self.query("N", params=[netuid])
 
-    def get_tempo(self, netuid: int = 0) -> int:
+    def get_reward_interval(self, netuid: int = 0) -> int:
         """
         Queries the network for the tempo setting, measured in blocks, for the
         specified subnet.
@@ -2810,7 +2810,7 @@ class TorusClient:
             QueryError: If the query to the network fails or is invalid.
         """
 
-        return self.query("Tempo", params=[netuid])
+        return self.query("RewardInterval", params=[netuid])
 
     def get_total_free_issuance(self, block_hash: str | None = None) -> int:
         """
