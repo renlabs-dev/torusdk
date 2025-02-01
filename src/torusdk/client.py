@@ -1964,28 +1964,32 @@ class TorusClient:
 
     def query_map_weights(
         self, extract_value: bool = False
-    ) -> dict[int, list[tuple[int, int]]] | None:
+    ) -> dict[Ss58Address, dict[str, list[tuple[Ss58Address, int]] | int]] | None:
         """
         Retrieves a mapping of weights for keys on the network.
 
-        Queries the network and returns a mapping of key UIDs to
-        their respective weights.
+        Queries the network and returns a mapping of account IDs to
+        their consensus member information.
 
         Args:
-            netuid: The network UID from which to get the weights.
+            extract_value: Boolean flag to extract values from the query result.
 
         Returns:
-            A dictionary mapping key UIDs to lists of their weights.
+            A dictionary mapping Ss58Address to their consensus member data containing:
+            - weights: list[tuple[Ss58Address, u16]]  # (account_id, weight) pairs
+            - last_incentives: int (u16)
+            - last_dividends: int (u16)
+            or None if the query fails.
 
         Raises:
             QueryError: If the query to the network fails or is invalid.
         """
-
         weights_dict = self.query_map(
             "ConsensusMembers",
             extract_value=extract_value,
             module="Emission0",
         ).get("ConsensusMembers")
+
         return weights_dict
 
     def query_map_key(
@@ -2795,13 +2799,10 @@ class TorusClient:
 
         return self.query("N", params=[netuid])
 
-    def get_reward_interval(self, netuid: int = 0) -> int:
+    def get_reward_interval(self) -> int:
         """
         Queries the network for the tempo setting, measured in blocks, for the
         specified subnet.
-
-        Args:
-            netuid: The network UID for which to query the tempo.
 
         Returns:
             The tempo setting for the specified subnet.
@@ -2810,7 +2811,7 @@ class TorusClient:
             QueryError: If the query to the network fails or is invalid.
         """
 
-        return self.query("RewardInterval", params=[netuid])
+        return self.query("RewardInterval")
 
     def get_total_free_issuance(self, block_hash: str | None = None) -> int:
         """
@@ -2946,41 +2947,6 @@ class TorusClient:
         return self.query(
             "Uids",
             params=[netuid, key],
-        )
-
-    def get_unit_emission(self) -> int:
-        """
-        Queries the network for the unit emission setting.
-
-        Retrieves the unit emission value, which represents the
-        emission rate or quantity for the $COMM token.
-
-        Returns:
-            The unit emission value in nanos for the network.
-
-        Raises:
-            QueryError: If the query to the network fails or is invalid.
-        """
-
-        return self.query("UnitEmission", module="Emission0")
-
-    def get_tx_rate_limit(self) -> int:
-        """
-        Queries the network for the transaction rate limit.
-
-        Retrieves the rate limit for transactions within the network,
-        which defines the maximum number of transactions that can be
-        processed within a certain timeframe.
-
-        Returns:
-            The transaction rate limit for the network.
-
-        Raises:
-            QueryError: If the query to the network fails or is invalid.
-        """
-
-        return self.query(
-            "TxRateLimit",
         )
 
     def get_subnet_burn(self) -> int:
