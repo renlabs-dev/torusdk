@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.4.1
+- Issues a warn when the torus storage is not created
+
 ## 0.2.4
 - Overhaul in display of balances
 - Fixed some references to the previous codebase
