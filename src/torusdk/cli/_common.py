@@ -1,3 +1,4 @@
+import os
 import re
 from dataclasses import dataclass
 from getpass import getpass
@@ -17,7 +18,12 @@ from torusdk._common import CID_REGEX, TorusSettings, get_node_url
 from torusdk.balance import dict_from_nano, from_rems, to_rems
 from torusdk.client import TorusClient
 from torusdk.errors import InvalidPasswordError, PasswordNotProvidedError
-from torusdk.key import load_keypair, resolve_key_ss58
+from torusdk.key import (
+    is_ss58_address,
+    key_path,
+    load_keypair,
+    resolve_key_ss58,
+)
 from torusdk.types.types import (
     AgentInfoWithOptionalBalance,
     Ss58Address,
@@ -64,6 +70,17 @@ def input_to_rems(value: float | None):
     if value is None:
         return None
     return to_rems(value)
+
+
+def check_storage_exists(console: Console):
+    root_path = key_path("").replace(".json", "")
+    if not os.path.exists(root_path):
+        console.print(
+            "Torus storage not found. Did you run `torus key migrate` "
+            "after updating your package?",
+            style="bold red",
+        )
+        raise typer.Exit(code=1)
 
 
 @dataclass
@@ -200,6 +217,8 @@ class CustomCtx:
         )
 
     def resolve_ss58(self, key: Ss58Address | Keypair | str):
+        if isinstance(key, str) and not is_ss58_address(key):
+            check_storage_exists(self.console_err)
         try:
             ss58 = resolve_key_ss58(key)
             return ss58
@@ -208,6 +227,9 @@ class CustomCtx:
             raise typer.Exit(code=1)
 
     def load_key(self, key: str, password: str | None = None) -> Keypair:
+        root_path = key_path("").replace(".json", "")
+        if not os.path.exists(root_path):
+            check_storage_exists(self.console_err)
         try:
             keypair = load_keypair(
                 key, password, password_provider=self.password_manager
