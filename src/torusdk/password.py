@@ -6,7 +6,7 @@ from torusdk.errors import PasswordNotProvidedError
 class PasswordProvider(Protocol):
     def get_password(self, key_name: str) -> str | None:
         """
-        Provides a password for the given key name, if it is know. If not,
+        Provides a password for the given key name, if it is known. If not,
         returns None. In that case, `ask_password` can be called to ask for the
         password depending on the implementation.
         """

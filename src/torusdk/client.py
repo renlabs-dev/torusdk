@@ -1,5 +1,4 @@
 import gc
-import hashlib
 import json
 import queue
 import threading
@@ -15,14 +14,13 @@ from torustrateinterface import ExtrinsicReceipt, Keypair, SubstrateInterface
 from torustrateinterface.storage import StorageKey
 
 from torusdk._common import transform_stake_dmap
-from torusdk.encryption import bytes_from_hex, encrypt_weights
 from torusdk.errors import ChainTransactionError, NetworkQueryError
-from torusdk.types import (
+from torusdk.types.proposal import Emission
+from torusdk.types.types import (
     Agent,
     AgentApplication,
-    NetworkParams,
+    GlobalParams,
     Ss58Address,
-    SubnetParams,
 )
 
 # TODO: InsufficientBalanceError, MismatchedLengthError etc
@@ -1183,7 +1181,7 @@ class TorusClient:
 
         params = {
             "name": name,
-            "address": url,
+            "url": url,
             "metadata": metadata,
             "staking_fee": staking_fee,
             "weight_control_fee": weight_control_fee,
@@ -1374,107 +1372,6 @@ class TorusClient:
             module="Offworker",
             sudo=True,
         )
-        return response
-
-    def vote_encrypted(
-        self,
-        key: Keypair,
-        uids: list[int],
-        weights: list[int],
-        netuid: int = 0,
-    ) -> ExtrinsicReceipt:
-        """
-        Casts encrypted votes for module UIDs with corresponding weights.
-
-        Args:
-            key (Keypair): The keypair used for signing the transaction.
-            uids (list[int]): List of UIDs to vote for.
-            weights (list[int]): List of weights corresponding to each UID.
-            netuid (int, optional): Network UID. Defaults to 0.
-
-        Returns:
-            ExtrinsicReceipt: Receipt of the submitted extrinsic.
-
-        Raises:
-            ValueError: If there's a length mismatch between UIDs and weights,
-                if subnet data is not found, or if subnet key format is invalid.
-        """
-        if len(uids) != len(weights):
-            raise ValueError("Length mismatch between UIDs and weights")
-
-        subnet_data = self.query(
-            "SubnetDecryptionData",
-            module="Emission0",
-            params=[netuid],
-        )
-        if not subnet_data:
-            raise ValueError("Subnet data not found")
-
-        subnet_key = subnet_data.get("node_public_key")
-        if not subnet_key or len(subnet_key) < 2:
-            raise ValueError("Invalid subnet key format")
-
-        vote_data = list(zip(uids, weights))
-        decryptor = (
-            bytes_from_hex(subnet_key[0]),
-            bytes_from_hex(subnet_key[1]),
-        )
-        validator_key = [int(x) for x in key.public_key]
-
-        encrypted_weights = encrypt_weights(decryptor, vote_data, validator_key)
-        weights_hash = hashlib.sha256(str(weights).encode()).hexdigest()
-
-        params = {
-            "uids": uids,
-            "encrypted_weights": encrypted_weights,
-            "netuid": netuid,
-            "decrypted_weights_hash": weights_hash,
-        }
-
-        return self.compose_call(
-            "set_weights_encrypted",
-            params=params,
-            key=key,
-            module="Emission0",
-        )
-
-    def update_subnet(
-        self,
-        key: Keypair,
-        params: SubnetParams,
-        netuid: int = 0,
-    ) -> ExtrinsicReceipt:
-        """
-        Update a subnet's configuration.
-
-        It requires the founder key for authorization.
-
-        Args:
-            key: The founder keypair of the subnet.
-            params: The new parameters for the subnet.
-            netuid: The network identifier.
-
-        Returns:
-            A receipt of the subnet update transaction.
-
-        Raises:
-            AuthorizationError: If the key is not authorized.
-            ChainTransactionError: If the transaction fails.
-        """
-
-        general_params = dict(params)
-        general_params["netuid"] = netuid
-        if general_params.get("subnet_metadata") is None:
-            general_params["metadata"] = None
-        else:
-            general_params["metadata"] = general_params["subnet_metadata"]
-
-        response = self.compose_call(
-            fn="update_subnet",
-            params=general_params,
-            key=key,
-        )
-
         return response
 
     def transfer_stake(
@@ -1779,7 +1676,7 @@ class TorusClient:
     def add_global_proposal(
         self,
         key: Keypair,
-        params: NetworkParams,
+        params: GlobalParams,
         cid: str | None,
     ) -> ExtrinsicReceipt:
         """
@@ -1812,6 +1709,43 @@ class TorusClient:
         response = self.compose_call(
             fn="add_global_params_proposal",
             params=general_params,
+            key=key,
+            module="Governance",
+        )
+
+        return response
+
+    def add_emission_proposal(
+        self,
+        key: Keypair,
+        params: Emission,
+        cid: str,
+    ):
+        """
+        Submits a proposal for altering the emission parameters of the network.
+
+        Allows for the submission of a proposal to change the emission
+        parameters of the network, such as the block reward, emission curve,
+        and other emission-related settings.
+
+        Args:
+            key: The keypair used for signing the proposal transaction.
+            params: A dictionary containing emission parameters like the block
+                reward, emission curve, and other emission-related settings.
+
+        Returns:
+            A receipt of the emission proposal transaction.
+
+        Raises:
+            InvalidParameterError: If the provided emission parameters are invalid.
+            ChainTransactionError: If the transaction fails.
+        """
+
+        raw_emission = params.model_dump()
+        emission_params = {"data": cid, **raw_emission}
+        response = self.compose_call(
+            fn="add_emission_proposal",
+            params=emission_params,
             key=key,
             module="Governance",
         )
@@ -2022,35 +1956,40 @@ class TorusClient:
         Raises:
             QueryError: If the query to the network fails or is invalid.
         """
+        storage = "Proposals"
         prop = self.query_map(
-            "Proposals", extract_value=extract_value, module="Governance"
-        )["Proposals"]
+            storage, extract_value=extract_value, module="Governance"
+        ).get(storage, {})
         return prop
 
     def query_map_weights(
         self, extract_value: bool = False
-    ) -> dict[int, list[tuple[int, int]]] | None:
+    ) -> dict[Ss58Address, dict[str, list[tuple[Ss58Address, int]] | int]] | None:
         """
         Retrieves a mapping of weights for keys on the network.
 
-        Queries the network and returns a mapping of key UIDs to
-        their respective weights.
+        Queries the network and returns a mapping of account IDs to
+        their consensus member information.
 
         Args:
-            netuid: The network UID from which to get the weights.
+            extract_value: Boolean flag to extract values from the query result.
 
         Returns:
-            A dictionary mapping key UIDs to lists of their weights.
+            A dictionary mapping Ss58Address to their consensus member data containing:
+            - weights: list[tuple[Ss58Address, u16]]  # (account_id, weight) pairs
+            - last_incentives: int (u16)
+            - last_dividends: int (u16)
+            or None if the query fails.
 
         Raises:
             QueryError: If the query to the network fails or is invalid.
         """
-
         weights_dict = self.query_map(
             "ConsensusMembers",
             extract_value=extract_value,
             module="Emission0",
         ).get("ConsensusMembers")
+
         return weights_dict
 
     def query_map_key(
@@ -2860,13 +2799,10 @@ class TorusClient:
 
         return self.query("N", params=[netuid])
 
-    def get_tempo(self, netuid: int = 0) -> int:
+    def get_reward_interval(self) -> int:
         """
         Queries the network for the tempo setting, measured in blocks, for the
         specified subnet.
-
-        Args:
-            netuid: The network UID for which to query the tempo.
 
         Returns:
             The tempo setting for the specified subnet.
@@ -2875,7 +2811,7 @@ class TorusClient:
             QueryError: If the query to the network fails or is invalid.
         """
 
-        return self.query("Tempo", params=[netuid])
+        return self.query("RewardInterval")
 
     def get_total_free_issuance(self, block_hash: str | None = None) -> int:
         """
@@ -3011,41 +2947,6 @@ class TorusClient:
         return self.query(
             "Uids",
             params=[netuid, key],
-        )
-
-    def get_unit_emission(self) -> int:
-        """
-        Queries the network for the unit emission setting.
-
-        Retrieves the unit emission value, which represents the
-        emission rate or quantity for the $COMM token.
-
-        Returns:
-            The unit emission value in nanos for the network.
-
-        Raises:
-            QueryError: If the query to the network fails or is invalid.
-        """
-
-        return self.query("UnitEmission", module="Emission0")
-
-    def get_tx_rate_limit(self) -> int:
-        """
-        Queries the network for the transaction rate limit.
-
-        Retrieves the rate limit for transactions within the network,
-        which defines the maximum number of transactions that can be
-        processed within a certain timeframe.
-
-        Returns:
-            The transaction rate limit for the network.
-
-        Raises:
-            QueryError: If the query to the network fails or is invalid.
-        """
-
-        return self.query(
-            "TxRateLimit",
         )
 
     def get_subnet_burn(self) -> int:

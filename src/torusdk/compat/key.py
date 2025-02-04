@@ -19,9 +19,9 @@ from torusdk.errors import (
     KeyNotFoundError,
     PasswordNotProvidedError,
 )
-from torusdk.key import check_ss58_address, is_ss58_address
+from torusdk.key import check_ss58_address, is_ss58_address, store_key
 from torusdk.password import NoPassword, PasswordProvider
-from torusdk.types import Ss58Address
+from torusdk.types.types import Ss58Address
 from torusdk.util import bytes_to_hex, check_str
 
 
@@ -192,7 +192,7 @@ def classic_store_key(
     classic_put(path, key_dict_json, password=password)
 
 
-def resolve_key_ss58(key: Ss58Address | Keypair | str) -> Ss58Address:
+def legacy_resolve_key_ss58(key: Ss58Address | Keypair | str) -> Ss58Address:
     """
     Resolves a keypair or key name to its corresponding SS58 address.
 
@@ -219,7 +219,17 @@ def resolve_key_ss58(key: Ss58Address | Keypair | str) -> Ss58Address:
     return check_ss58_address(address)
 
 
-def resolve_key_ss58_encrypted(
+def migrate_to_torus(name: str, password_provider: PasswordProvider):
+    password = None
+    try:
+        commune_key = classic_load_key(name)
+    except PasswordNotProvidedError:
+        password = password_provider.ask_password(name)
+        commune_key = classic_load_key(name, password=password)
+    store_key(commune_key, name, password)
+
+
+def legacy_resolve_key_ss58_encrypted(
     key: Ss58Address | Keypair | str,
     password: str | None = None,
     password_provider: PasswordProvider = NoPassword(),
@@ -243,7 +253,7 @@ def resolve_key_ss58_encrypted(
     return check_ss58_address(address, keypair.ss58_format)
 
 
-def local_key_addresses(
+def legacy_local_key_adresses(
     password_provider: PasswordProvider = NoPassword(),
 ) -> dict[str, Ss58Address]:
     """

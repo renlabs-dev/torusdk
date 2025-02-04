@@ -1,10 +1,11 @@
+from enum import Enum
 from typing import Any, TypeVar
 
 DECIMALS = 18
-UNIT_NAME = "Toids"
+UNIT_NAME = "Rems"
 
 
-def from_nano(amount: int) -> float:
+def from_rems(amount: int) -> float:
     """
     Converts from nano to j
     """
@@ -12,12 +13,33 @@ def from_nano(amount: int) -> float:
     return amount / (10**DECIMALS)
 
 
-def to_nano(amount: float) -> int:
+def to_rems(amount: float) -> int:
     """
     Converts from j to nano
     """
 
     return int(amount * (10**DECIMALS))
+
+
+class BalanceUnit(str, Enum):
+    joule = "rems"
+    j = "r"
+    nano = "torus"
+    n = "t"
+
+
+def format_balance(balance: int, unit: BalanceUnit = BalanceUnit.nano) -> str:
+    """
+    Formats a balance.
+    """
+
+    match unit:
+        case BalanceUnit.nano | BalanceUnit.n:
+            return f"{balance}"
+        case BalanceUnit.joule | BalanceUnit.j:
+            in_joules = from_rems(balance)
+            round_joules = round(in_joules, 4)
+            return f"{round_joules:,}" + " \u2653"
 
 
 def from_horus(amount: int, subnet_tempo: int = 100) -> float:
@@ -35,7 +57,7 @@ def repr_j(amount: int):
     E.g. "103.2J".
     """
 
-    return f"{from_nano(amount)} {UNIT_NAME}"
+    return f"{from_rems(amount)} {UNIT_NAME}"
 
 
 T = TypeVar("T", str, int)

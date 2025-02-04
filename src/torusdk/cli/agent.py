@@ -1,11 +1,14 @@
 from typing import Any, Optional, cast
 
 import typer
+from pydantic import ValidationError
 from typer import Context
 
 from torusdk._common import intersection_update
-from torusdk.balance import from_nano
+from torusdk.balance import from_rems
 from torusdk.cli._common import (
+    HIDE_FEATURES,
+    extract_cid,
     make_custom_context,
     print_module_info,
     print_table_from_plain_dict,
@@ -13,31 +16,43 @@ from torusdk.cli._common import (
 )
 from torusdk.errors import ChainTransactionError
 from torusdk.misc import get_governance_config, get_map_modules
+from torusdk.types.types import AgentMetadata
+from torusdk.util import get_json_from_cid
 
 agent_app = typer.Typer(no_args_is_help=True)
 
 
 # TODO: refactor agent register CLI
 # - key can be infered from name or vice-versa?
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def register(
     ctx: Context,
     name: str,
     key: str,
     url: str,
-    metadata: str,
+    metadata: str = typer.Argument(..., callback=extract_cid),
 ):
     """
     Registers an agent.
     """
     context = make_custom_context(ctx)
     client = context.com_client()
-
-    if metadata and len(metadata) > 59:
-        raise ValueError("Metadata must be less than 60 characters")
-
+    data = get_json_from_cid(metadata)
+    try:
+        _ = AgentMetadata.model_validate(data)
+    except ValidationError:
+        context.error(
+            "Your ipfs file is invalid. "
+            "You can find the schema definition "
+            "at https://docs.torus.network/agents/register-a-agent"
+        )
+        exit(1)
     resolved_key = context.load_key(key, None)
-
+    burn = client.get_burn()
+    if not context.confirm(
+        f"{from_rems(burn)} tokens will be burned. Do you want to continue?"
+    ):
+        raise typer.Abort()
     with context.progress_status(f"Registering Agent {name}..."):
         response = client.register_agent(
             resolved_key,
@@ -59,7 +74,6 @@ def list_applications(ctx: Context):
     """
     context = make_custom_context(ctx)
     client = context.com_client()
-
     with context.progress_status("Getting applications..."):
         applications = client.query_map_applications()
     if len(applications) == 0:
@@ -84,11 +98,11 @@ def add_application(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    resolved_key = context.load_key(payer_key, None)
-    application_addr = context.resolve_key_ss58(application_key, None)
+    resolved_key = context.load_key(payer_key)
+    application_addr = context.resolve_ss58(application_key)
     application_burn = get_governance_config(client).agent_application_cost
     confirm = context.confirm(
-        f"{from_nano(application_burn)} tokens will be burned. Do you want to continue?"
+        f"{from_rems(application_burn)} tokens will be burned. Do you want to continue?"
     )
     if not confirm:
         context.info("Application addition cancelled")
@@ -103,7 +117,7 @@ def add_application(
     context.info("Application added.")
 
 
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def deregister(ctx: Context, key: str):
     """
     Deregisters an agent from a subnet.
@@ -111,7 +125,7 @@ def deregister(ctx: Context, key: str):
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    resolved_key = context.load_key(key, None)
+    resolved_key = context.load_key(key)
 
     with context.progress_status("Deregistering your agent..."):
         response = client.deregister_module(key=resolved_key)
@@ -122,7 +136,7 @@ def deregister(ctx: Context, key: str):
             raise ChainTransactionError(response.error_message)  # type: ignore
 
 
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def update(
     ctx: Context,
     key: str,
@@ -139,10 +153,21 @@ def update(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    if metadata and len(metadata) > 59:
-        raise ValueError("Metadata must be less than 60 characters")
-
-    resolved_key = context.load_key(key, None)
+    # if metadata and len(metadata) > 59:
+    #     raise ValueError("Metadata must be less than 60 characters")
+    # TODO: create a validator for agent metadata
+    if metadata:
+        data = get_json_from_cid(metadata)
+        try:
+            _ = AgentMetadata.model_validate(data)
+        except ValidationError:
+            context.error(
+                "Your ipfs file is invalid. "
+                "You can find the schema definition "
+                "at https://docs.torus.network/agents/register-a-agent"
+            )
+            exit(1)
+    resolved_key = context.load_key(key)
 
     agents = get_map_modules(client, include_balances=False)
     modules_to_list = [value for _, value in agents.items()]
@@ -186,7 +211,7 @@ def update(
         raise ChainTransactionError(response.error_message)  # type: ignore
 
 
-@agent_app.command(hidden=True)
+@agent_app.command(hidden=HIDE_FEATURES)
 def info(ctx: Context, name: str, balance: bool = False):
     """
     Gets agent info
@@ -211,7 +236,7 @@ def info(ctx: Context, name: str, balance: bool = False):
     )
 
 
-@agent_app.command(name="list", hidden=True)
+@agent_app.command(name="list", hidden=HIDE_FEATURES)
 def inventory(ctx: Context, balances: bool = False):
     """
     Agents stats on the network.

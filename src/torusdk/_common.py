@@ -2,21 +2,18 @@ import random
 import re
 import warnings
 from collections import defaultdict
-from enum import Enum
 from typing import Any, Callable, Mapping, TypeVar
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from torusdk.balance import from_nano
-from torusdk.types import Ss58Address
+from torusdk.types.types import Ss58Address
 
-IPFS_REGEX = re.compile(r"^Qm[1-9A-HJ-NP-Za-km-z]{44}$")
+IPFS_REGEX = re.compile(r"^Qm[1-9A-HJ-NP-Za-km-z]{44}$|bafk[1-7a-z]{52}$/i")
+CID_REGEX = re.compile(
+    r"^(?:ipfs://)?(?P<cid>Qm[1-9A-HJ-NP-Za-km-z]{44,}|b[A-Za-z2-7]{58,}|B[A-Z2-7]{58,}|z[1-9A-HJ-NP-Za-km-z]{48,}|F[0-9A-F]{50,})(?:/[\d\w.]+)*$"
+)
 SS58_FORMAT = 42
-
-
-def extract_ipfs():
-    pass
 
 
 def deprecated(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -30,8 +27,8 @@ def deprecated(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-class ComxSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="COMX_")
+class TorusSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="TORUS_")
     # TODO: improve node lists
     NODE_URLS: list[str] = [
         "wss://api.torus.network",
@@ -42,49 +39,28 @@ class ComxSettings(BaseSettings):
 
 
 def get_node_url(
-    comx_settings: ComxSettings | None = None, *, use_testnet: bool = False
+    torus_settings: TorusSettings | None = None, *, use_testnet: bool = False
 ) -> str:
-    comx_settings = comx_settings or ComxSettings()
+    torus_settings = torus_settings or TorusSettings()
     match use_testnet:
         case True:
-            node_url = random.choice(comx_settings.TESTNET_NODE_URLS)
+            node_url = random.choice(torus_settings.TESTNET_NODE_URLS)
         case False:
-            node_url = random.choice(comx_settings.NODE_URLS)
+            node_url = random.choice(torus_settings.NODE_URLS)
     return node_url
 
 
 def get_available_nodes(
-    comx_settings: ComxSettings | None = None, *, use_testnet: bool = False
+    torus_settings: TorusSettings | None = None, *, use_testnet: bool = False
 ) -> list[str]:
-    comx_settings = comx_settings or ComxSettings()
+    torus_settings = torus_settings or TorusSettings()
 
     match use_testnet:
         case True:
-            node_urls = comx_settings.TESTNET_NODE_URLS
+            node_urls = torus_settings.TESTNET_NODE_URLS
         case False:
-            node_urls = comx_settings.NODE_URLS
+            node_urls = torus_settings.NODE_URLS
     return node_urls
-
-
-class BalanceUnit(str, Enum):
-    joule = "joule"
-    j = "j"
-    nano = "nano"
-    n = "n"
-
-
-def format_balance(balance: int, unit: BalanceUnit = BalanceUnit.nano) -> str:
-    """
-    Formats a balance.
-    """
-
-    match unit:
-        case BalanceUnit.nano | BalanceUnit.n:
-            return f"{balance}"
-        case BalanceUnit.joule | BalanceUnit.j:
-            in_joules = from_nano(balance)
-            round_joules = round(in_joules, 4)
-            return f"{round_joules:,} $TORUS"
 
 
 K = TypeVar("K")

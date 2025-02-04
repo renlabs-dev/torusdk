@@ -1,11 +1,9 @@
 import typer
 from typer import Context
 
-import torusdk.balance as c_balance
 from torusdk.cli._common import (
     make_custom_context,
-    print_table_from_plain_dict,
-    tranform_network_params,
+    render_pydantic_table,
 )
 from torusdk.misc import (
     get_global_params,
@@ -42,26 +40,4 @@ def params(ctx: Context):
 
     with context.progress_status("Getting global network params ..."):
         global_params = get_global_params(client)
-    printable_params = tranform_network_params(global_params)
-    print_table_from_plain_dict(
-        printable_params, ["Global params", "Value"], context.console
-    )
-
-
-@network_app.command()
-def registration_burn(
-    ctx: Context,
-    netuid: int,
-):
-    """
-    Appraises the cost of registering a agent on the torus network.
-    """
-
-    context = make_custom_context(ctx)
-    client = context.com_client()
-
-    burn = client.get_burn()
-    registration_cost = c_balance.from_nano(burn)
-    context.info(
-        f"The cost to register on a netuid: {netuid} is: {registration_cost} $TORUS"
-    )
+    render_pydantic_table(global_params, context.console)

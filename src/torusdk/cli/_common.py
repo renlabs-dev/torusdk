@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from getpass import getpass
 from typing import Any, Callable, Mapping, TypeVar, cast
@@ -12,12 +13,12 @@ from rich.table import Table
 from torustrateinterface import Keypair
 from typer import Context
 
-from torusdk._common import ComxSettings, get_node_url
-from torusdk.balance import dict_from_nano, from_nano
+from torusdk._common import CID_REGEX, TorusSettings, get_node_url
+from torusdk.balance import dict_from_nano, from_rems, to_rems
 from torusdk.client import TorusClient
-from torusdk.compat.key import resolve_key_ss58_encrypted, try_classic_load_key
 from torusdk.errors import InvalidPasswordError, PasswordNotProvidedError
-from torusdk.types import (
+from torusdk.key import load_keypair, resolve_key_ss58
+from torusdk.types.types import (
     AgentInfoWithOptionalBalance,
     Ss58Address,
 )
@@ -26,6 +27,43 @@ NOT_IMPLEMENTED_MESSAGE = (
     "method not available. "
     "It's going to be rolled out in the coming updates."
 )
+
+HIDE_FEATURES = False
+
+
+KEY_DEPRECATION_WARNING = (
+    "\nYou are using a legacy key storage. "
+    "This will be deprecated in the future. "
+    "Please migrate your key to torus storage "
+    "using the `torus key migrate [key]` command.\n"
+)
+KEY_DEPRECATION_STYLE = f"{typer.colors.RED} bold on yellow"
+
+
+T = TypeVar("T", bound=BaseModel)
+
+
+def merge_models(model_a: T, model_b: BaseModel) -> T:
+    dict_a = model_a.model_dump()
+    dict_b = model_b.model_dump(exclude_unset=True)
+    unoptional_dict = {
+        key: value for key, value in dict_b.items() if value is not None
+    }
+    merged_dict = {**dict_a, **unoptional_dict}
+    return model_a.__class__(**merged_dict)
+
+
+def extract_cid(value: str):
+    cid_hash = re.match(CID_REGEX, value)
+    if not cid_hash:
+        raise typer.BadParameter(f"CID provided is invalid: {value}")
+    return cid_hash.group("cid")
+
+
+def input_to_rems(value: float | None):
+    if value is None:
+        return None
+    return to_rems(value)
 
 
 @dataclass
@@ -41,7 +79,7 @@ class ExtendedContext(Context):
 
 class CliPasswordProvider:
     def __init__(
-        self, settings: ComxSettings, prompt_secret: Callable[[str], str]
+        self, settings: TorusSettings, prompt_secret: Callable[[str], str]
     ):
         self.settings = settings
         self.prompt_secret = prompt_secret
@@ -68,7 +106,7 @@ class CliPasswordProvider:
 
 class CustomCtx:
     ctx: ExtendedContext
-    settings: ComxSettings
+    settings: TorusSettings
     console: rich.console.Console
     console_err: rich.console.Console
     password_manager: CliPasswordProvider
@@ -77,7 +115,7 @@ class CustomCtx:
     def __init__(
         self,
         ctx: ExtendedContext,
-        settings: ComxSettings,
+        settings: TorusSettings,
         console: rich.console.Console,
         console_err: rich.console.Console,
         com_client: TorusClient | None = None,
@@ -134,9 +172,9 @@ class CustomCtx:
         self,
         message: str,
         *args: tuple[Any, ...],
-        **kwargs: dict[str, Any],
+        **kwargs: Any,
     ) -> None:
-        self.console_err.print(message, *args, **kwargs)  # type: ignore
+        self.console_err.print(message, *args, **kwargs)
 
     def error(
         self,
@@ -161,27 +199,20 @@ class CustomCtx:
             message, password=True, console=self.console_err
         )
 
+    def resolve_ss58(self, key: Ss58Address | Keypair | str):
+        try:
+            ss58 = resolve_key_ss58(key)
+            return ss58
+        except ValueError as e:
+            self.error(e.args[0])
+            raise typer.Exit(code=1)
+
     def load_key(self, key: str, password: str | None = None) -> Keypair:
         try:
-            keypair = try_classic_load_key(
+            keypair = load_keypair(
                 key, password, password_provider=self.password_manager
             )
             return keypair
-        except PasswordNotProvidedError:
-            self.error(f"Password not provided for key '{key}'")
-            raise typer.Exit(code=1)
-        except InvalidPasswordError:
-            self.error(f"Incorrect password for key '{key}'")
-            raise typer.Exit(code=1)
-
-    def resolve_key_ss58(
-        self, key: Ss58Address | Keypair | str, password: str | None = None
-    ) -> Ss58Address:
-        try:
-            address = resolve_key_ss58_encrypted(
-                key, password, password_provider=self.password_manager
-            )
-            return address
         except PasswordNotProvidedError:
             self.error(f"Password not provided for key '{key}'")
             raise typer.Exit(code=1)
@@ -193,7 +224,7 @@ class CustomCtx:
 def make_custom_context(ctx: typer.Context) -> CustomCtx:
     return CustomCtx(
         ctx=cast(ExtendedContext, ctx),  # TODO: better check
-        settings=ComxSettings(),
+        settings=TorusSettings(),
         console=Console(),
         console_err=Console(stderr=True),
     )
@@ -246,51 +277,113 @@ def print_table_from_plain_dict(
     console.print(table)
 
 
-T = TypeVar("T", bound=BaseModel)
+def render_pydantic_subtable(value: BaseModel | dict[Any, Any]) -> Table:
+    """
+    Renders a subtable for a nested Pydantic object or dictionary.
+
+    Args:
+        value: A nested Pydantic object or dictionary.
+
+    Returns:
+        A rich Table object representing the subtable.
+    """
+    subtable = Table(
+        show_header=False,
+        padding=(0, 0, 0, 0),
+        border_style="bright_black",
+    )
+    if isinstance(value, BaseModel):
+        for subfield_name, _ in value.model_fields.items():
+            subfield_value = getattr(value, subfield_name)
+            subtable.add_row(f"{subfield_name}: {subfield_value}")
+    else:
+        for subfield_name, subfield_value in value.items():  # type: ignore
+            subtable.add_row(f"{subfield_name}: {subfield_value}")
+    return subtable
+
+
+def render_single_pydantic_object(
+    obj: BaseModel, console: Console, title: str = ""
+) -> None:
+    """
+    Renders a rich table from a single Pydantic object.
+
+    Args:
+        obj: A single Pydantic object.
+        console: The rich Console object.
+        title: Optional title for the table.
+    """
+    table = Table(
+        title=title,
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold magenta",
+    )
+
+    table.add_column("Field", style="white", vertical="middle")
+    table.add_column("Value", style="white", vertical="middle")
+
+    for field_name, _ in obj.model_fields.items():
+        value = getattr(obj, field_name)
+        if isinstance(value, BaseModel):
+            subtable = render_pydantic_subtable(value)
+            table.add_row(field_name, subtable)
+        else:
+            table.add_row(field_name, str(value))
+
+    console.print(table)
+    console.print("\n")
 
 
 def render_pydantic_table(
-    objects: list[T], console: Console, title: str = ""
+    objects: T | list[T],
+    console: Console,
+    title: str = "",
+    ignored_columns: list[str] = [],
 ) -> None:
     """
-    Renders a rich table from a list of Pydantic objects.
+    Renders a rich table from a list of Pydantic objects or a single Pydantic object.
 
     Args:
-        objects: A list of Pydantic objects.
+        objects: A list of Pydantic objects or a single Pydantic object.
         console: The rich Console object.
         title: Optional title for the table.
+        ignored_columns: List of column names to ignore.
     """
     if not objects:
         return
 
-    # Create a rich table
-    table = Table(title=title, show_header=True, header_style="bold magenta")
+    if isinstance(objects, BaseModel):
+        render_single_pydantic_object(objects, console, title)
+        return
 
-    # Add columns to the table based on the Pydantic model fields
+    table = Table(
+        title=title,
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold magenta",
+    )
+
     for field_name, _ in objects[0].model_fields.items():
+        if field_name in ignored_columns:
+            continue
         table.add_column(field_name, style="white", vertical="middle")
 
-    # Add rows to the table from Pydantic objects
     for obj in objects:
         row_data: list[str | Table] = []
         for field_name, _ in obj.model_fields.items():
+            if field_name in ignored_columns:
+                continue
             value = getattr(obj, field_name)
             if isinstance(value, BaseModel):
-                subtable = Table(
-                    show_header=False,
-                    padding=(0, 0, 0, 0),
-                    border_style="bright_black",
-                )
-                for subfield_name, _ in value.model_fields.items():
-                    subfield_value = getattr(value, subfield_name)
-                    subtable.add_row(f"{subfield_name}: {subfield_value}")
+                subtable = render_pydantic_subtable(value)
                 row_data.append(subtable)
             else:
                 row_data.append(str(value))
         table.add_row(*row_data)
 
-    # Render the table
     console.print(table)
+    console.print("\n")
 
 
 def print_table_standardize(
@@ -326,9 +419,9 @@ def transform_module_into(
 
         for key in to_exclude:
             del module[key]
-        module["stake"] = round(from_nano(module["stake"]), 2)  # type: ignore
+        module["stake"] = round(from_rems(module["stake"]), 2)  # type: ignore
         if module.get("balance") is not None:
-            module["balance"] = from_nano(module["balance"])  # type: ignore
+            module["balance"] = from_rems(module["balance"])  # type: ignore
         else:
             # user should not see None values
             del module["balance"]

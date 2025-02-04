@@ -4,16 +4,12 @@ Data storage compatible with the *classic* `commune` library.
 
 # TODO: encryption
 
-import base64
-import hashlib
 import json
 import os.path
 import time
 from typing import Any
 
-from nacl.secret import SecretBox
-from nacl.utils import random
-
+from torusdk.encryption import decrypt_data, encrypt_data
 from torusdk.errors import PasswordNotProvidedError
 from torusdk.util import ensure_parent_dir_exists
 
@@ -28,33 +24,6 @@ COMMUNE_HOME
 
     classic commune data storage home directory.
 """
-
-
-def _derive_key(password: str):
-    # Derive a 256-bit key from the password using Blake2b
-    key = hashlib.blake2b(password.encode(), digest_size=32).digest()
-    return key
-
-
-def _encrypt_data(password: str, data: Any) -> str:
-    key = _derive_key(password)
-    box = SecretBox(key)
-    nonce = random(SecretBox.NONCE_SIZE)
-    raw = json.dumps(data).encode()
-    ciphertext = box.encrypt(raw, nonce).ciphertext
-    encrypted = nonce + ciphertext
-    decoded_data = base64.b64encode(encrypted).decode()
-    return decoded_data
-
-
-def _decrypt_data(password: str, data: str) -> Any:
-    key = _derive_key(password)
-    box = SecretBox(key)
-    encrypted = base64.b64decode(data.encode())
-    nonce = encrypted[: SecretBox.NONCE_SIZE]
-    ciphertext = encrypted[SecretBox.NONCE_SIZE :]
-    raw = box.decrypt(ciphertext, nonce)
-    return json.loads(raw.decode())
 
 
 def classic_load(
@@ -91,7 +60,7 @@ def classic_load(
             "Data is encrypted but no password provided"
         )
     if body["encrypted"] and password is not None:
-        content = _decrypt_data(password, body["data"])
+        content = decrypt_data(password, body["data"])
     else:
         content = body["data"]
 
@@ -141,7 +110,7 @@ def classic_put(
     ensure_parent_dir_exists(full_path)
 
     if password:
-        value = _encrypt_data(password, value)
+        value, _ = encrypt_data(password, value)
         encrypted = True
     else:
         encrypted = False

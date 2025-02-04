@@ -4,12 +4,13 @@ from typing import Any, TypeVar
 from torusdk._common import transform_stake_dmap
 from torusdk.client import TorusClient
 from torusdk.key import check_ss58_address
-from torusdk.types import (
+from torusdk.types.proposal import Emission
+from torusdk.types.types import (
     Agent,
     AgentInfoWithOptionalBalance,
-    GovernanceConfiguration,
+    GlobalGovernanceConfig,
+    GlobalParams,
     MinFee,
-    NetworkParams,
     Ss58Address,
 )
 
@@ -104,7 +105,40 @@ def get_governance_config(c_client: TorusClient):
             ],
         }
     )["GlobalGovernanceConfig"]
-    return GovernanceConfiguration.model_validate(governance_config)
+    return GlobalGovernanceConfig.model_validate(governance_config)
+
+
+def get_emission_params(c_client: TorusClient):
+    query_all = c_client.query_batch(
+        {
+            "Emission0": [
+                ("EmissionRecyclingPercentage", []),
+                ("IncentivesRatio", []),
+            ],
+            "Governance": [
+                ("TreasuryEmissionFee", []),
+            ],
+        }
+    )
+    raw_emission = {
+        "recycling_percentage": query_all["EmissionRecyclingPercentage"],
+        "treasury_percentage": query_all["TreasuryEmissionFee"],
+        "incentives_ratio": query_all["IncentivesRatio"],
+    }
+    emission_params = Emission.model_validate(raw_emission)
+
+    return emission_params
+
+
+def get_fees(c_client: TorusClient):
+    fees = c_client.query_batch(
+        {
+            "Torus0": [
+                ("FeeConstraints", []),
+            ],
+        }
+    )["FeeConstraints"]
+    return MinFee.model_validate(fees)
 
 
 def get_global_params(c_client: TorusClient):
@@ -123,25 +157,38 @@ def get_global_params(c_client: TorusClient):
             ],
             "Emission0": [
                 ("MaxAllowedWeights", []),
+                ("MinStakePerWeight", []),
+            ],
+            "Governance": [
+                ("GlobalGovernanceConfig", []),
             ],
         }
     )
-    fees = MinFee.model_validate(query_all["FeeConstraints"])
-    global_params: NetworkParams = NetworkParams.model_validate(
-        {
-            "max_name_length": int(query_all["MaxNameLength"]),
-            "min_name_length": int(query_all["MinNameLength"]),
-            "max_allowed_agents": int(query_all["MaxAllowedAgents"]),
-            "dividends_participation_weight": int(
-                query_all["DividendsParticipationWeight"]
-            ),
-            "max_allowed_weights": int(query_all["MaxAllowedWeights"]),
-            "min_weight_control_fee": fees.min_weight_control_fee,
-            "min_weight_stake": 3,  # TODO: unhardcode it
-            "min_staking_fee": fees.min_staking_fee,
-        }
+    governance_config = GlobalGovernanceConfig.model_validate(
+        query_all["GlobalGovernanceConfig"]
     )
-    return global_params.model_dump()
+    fees = MinFee.model_validate(query_all["FeeConstraints"])
+    network_params = {
+        "max_name_length": int(query_all["MaxNameLength"]),
+        "min_name_length": int(query_all["MinNameLength"]),
+        "max_allowed_agents": int(query_all["MaxAllowedAgents"]),
+        "dividends_participation_weight": int(
+            query_all["DividendsParticipationWeight"]
+        ),
+        "max_allowed_weights": int(query_all["MaxAllowedWeights"]),
+        "min_weight_control_fee": fees.min_weight_control_fee,
+        "min_staking_fee": fees.min_staking_fee,
+        "proposal_cost": governance_config.proposal_cost,
+        "min_stake_per_weight": query_all["MinStakePerWeight"],
+        "proposal_expiration": governance_config.proposal_expiration,
+        "agent_application_cost": governance_config.agent_application_cost,
+        "agent_application_expiration": governance_config.agent_application_expiration,
+        "proposal_reward_treasury_allocation": governance_config.proposal_reward_treasury_allocation,
+        "max_proposal_reward_treasury_allocation": governance_config.max_proposal_reward_treasury_allocation,
+        "proposal_reward_interval": governance_config.proposal_reward_interval,
+    }
+    global_params: GlobalParams = GlobalParams.model_validate(network_params)
+    return global_params
 
 
 def concat_to_local_keys(

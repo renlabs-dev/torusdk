@@ -1,3 +1,4 @@
+import os
 import re
 from enum import Enum
 from typing import Any, Optional, cast
@@ -7,18 +8,27 @@ from torustrateinterface import Keypair
 from typeguard import check_type
 from typer import Context
 
-import torusdk.compat.key as comx_key
-from torusdk._common import SS58_FORMAT, BalanceUnit, format_balance
+from torusdk._common import SS58_FORMAT
+from torusdk.balance import BalanceUnit, format_balance
 from torusdk.cli._common import (
     make_custom_context,
     print_table_from_plain_dict,
     print_table_standardize,
 )
 from torusdk.compat.key import (
-    classic_store_key,
-    local_key_addresses,
+    migrate_to_torus,
 )
-from torusdk.key import check_ss58_address, generate_keypair, is_ss58_address
+from torusdk.compat.storage import COMMUNE_HOME
+from torusdk.key import (
+    TORUS_HOME,
+    check_ss58_address,
+    generate_keypair,
+    is_ss58_address,
+    key_name_exists,
+    local_key_adresses,
+    store_key,
+    to_pydantic,
+)
 from torusdk.misc import (
     local_keys_allbalance,
     local_keys_to_freebalance,
@@ -35,18 +45,30 @@ class SortBalance(str, Enum):
 
 
 @key_app.command()
-def create(ctx: Context, name: str, password: str = typer.Option(None)):
+def create(
+    ctx: Context,
+    name: str,
+    password: str = typer.Option(None),
+):
     """
     Generates a new key and stores it on a disk with the given name.
     """
     context = make_custom_context(ctx)
+
+
+    if key_name_exists(name):
+        context.info(f"WARNING! Key '{name}' already exists", style="bold")
+        if not context.confirm("Are you sure you want to override it?"):
+            raise typer.Abort()
+
+        context.info("overriding...")
 
     keypair = generate_keypair()
     address = keypair.ss58_address
 
     context.info(f"Generated key with public address '{address}'.")
 
-    classic_store_key(keypair, name, password)
+    store_key(keypair, name, password)
 
     context.info(f"Key successfully stored with name '{name}'.")
 
@@ -79,7 +101,7 @@ def regen(
     address = keypair.ss58_address
     context.info(f"Loaded {key_type} with public address `{address}`.")
 
-    classic_store_key(keypair, name, password)
+    store_key(keypair, name, password)
 
     context.info(f"Key stored with name `{name}` successfully.")
 
@@ -96,13 +118,13 @@ def show(
     """
     context = make_custom_context(ctx)
 
-    keypair = context.load_key(key, password)
-    key_dict = comx_key.to_classic_dict(keypair, path=key)
-
+    kp = context.load_key(key, password)
+    tk = to_pydantic(kp, key)
     if show_private is not True:
-        key_dict["private_key"] = "[SENSITIVE-MODE]"
-        key_dict["seed_hex"] = "[SENSITIVE-MODE]"
-        key_dict["mnemonic"] = "[SENSITIVE-MODE]"
+        tk.private_key = "[SENSITIVE-MODE]"
+        tk.seed_hex = "[SENSITIVE-MODE]"
+        tk.mnemonic = "[SENSITIVE-MODE]"
+    key_dict = tk.model_dump()
 
     key_dict = check_type(key_dict, dict[str, Any])
 
@@ -121,7 +143,7 @@ def balances(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    local_keys = local_key_addresses(context.password_manager)
+    local_keys = local_key_adresses(context.password_manager)
     with context.console.status(
         "Getting balances of all keys, this might take a while..."
     ):
@@ -191,13 +213,18 @@ def inventory(
     """
     context = make_custom_context(ctx)
 
-    key_to_address = local_key_addresses(context.password_manager)
+    key_to_address = local_key_adresses(context.password_manager)
     general_key_to_address: dict[str, str] = cast(
         dict[str, str], key_to_address
     )
+
     print_table_from_plain_dict(
         general_key_to_address, ["Key", "Address"], context.console
     )
+
+    total = len(key_to_address)
+
+    context.info(f"{total} row{'s' if total != 1 else ''}.")
 
 
 @key_app.command()
@@ -268,7 +295,7 @@ def total_free_balance(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    local_keys = local_key_addresses(context.password_manager)
+    local_keys = local_key_adresses(context.password_manager)
     with context.progress_status("Getting total free balance of all keys..."):
         key2balance: dict[str, int] = local_keys_to_freebalance(
             client, local_keys
@@ -290,7 +317,7 @@ def total_staked_balance(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    local_keys = local_key_addresses(context.password_manager)
+    local_keys = local_key_adresses(context.password_manager)
     with context.progress_status("Getting total staked balance of all keys..."):
         key2stake: dict[str, int] = local_keys_to_stakedbalance(
             client,
@@ -306,15 +333,6 @@ def total_staked_balance(
 def total_balance(
     ctx: Context,
     unit: BalanceUnit = BalanceUnit.joule,
-    use_universal_password: bool = typer.Option(
-        False,
-        help="""
-    Password to decrypt all keys.
-    This will only work if all encrypted keys uses the same password.
-    If this is not the case, leave it blank and you will be prompted to give
-    every password.
-    """,
-    ),
 ):
     """
     Returns total tokens of all keys on a disk
@@ -322,7 +340,7 @@ def total_balance(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    local_keys = local_key_addresses(context.password_manager)
+    local_keys = local_key_adresses(context.password_manager)
     with context.progress_status("Getting total tokens of all keys..."):
         key2balance, key2stake = local_keys_allbalance(client, local_keys)
         key2tokens = {k: v + key2stake[k] for k, v in key2balance.items()}
@@ -352,7 +370,7 @@ def power_delegation(
             context.info("Aborted.")
             exit(0)
 
-        local_keys = local_key_addresses(context.password_manager)
+        local_keys = local_key_adresses(context.password_manager)
     else:
         local_keys = {key: None}
     for key_name in local_keys.keys():
@@ -378,7 +396,7 @@ def weight_delegation(
     context = make_custom_context(ctx)
     client = context.com_client()
     resolved_key = context.load_key(key, None)
-    resolved_target = context.resolve_key_ss58(target, None)
+    resolved_target = context.resolve_ss58(target)
 
     if not context.confirm(
         "Are you sure you want to delegate vote "
@@ -406,3 +424,37 @@ def regain_weight_delegation(
         raise typer.Abort()
 
     client.regain_weight_control(resolved_key)
+
+
+@key_app.command()
+def migrate(ctx: Context, key: Optional[str] = typer.Option(None)):
+    context = make_custom_context(ctx)
+    if not context.confirm(
+        "You are about to migrate your .commune keys to the .torus storage. "
+        "This has no effect on the keys stored in the .commune storage. "
+        "It just copies the keys to the .torus storage so that you can "
+        "effectively use torusdk. Do you want to proceed?"
+    ):
+        raise typer.Abort()
+    commune_home = os.path.expanduser(COMMUNE_HOME) + "/key"
+    torus_home = os.path.expanduser(TORUS_HOME) + "/key"
+    if key is None:
+        keys = os.listdir(commune_home)
+    else:
+        keys = [key]
+    for key in keys:
+        commune_path = os.path.join(commune_home, key)
+        torus_path = os.path.join(torus_home, key)
+
+        if os.path.isfile(commune_path):
+            if not os.path.exists(torus_path):
+                key_name = key.replace(".json", "")
+                migrate_to_torus(key_name, context.password_manager)
+            else:
+                context.info(
+                    f"Key {key} already exists in .torus storage. "
+                    "Not going to migrate it."
+                )
+        else:
+            context.error(f"Key not found in .commune storage: {key}")
+    print("Migration completed.")

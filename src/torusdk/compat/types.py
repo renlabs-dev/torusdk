@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-from torusdk.types import Ss58Address
+from torusdk.types.types import Ss58Address
 
 
 class CommuneStorageDict(TypedDict):
