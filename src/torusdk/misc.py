@@ -113,6 +113,7 @@ def get_emission_params(c_client: TorusClient):
         {
             "Emission0": [
                 ("EmissionRecyclingPercentage", []),
+                ("IncentivesRatio", []),
             ],
             "Governance": [
                 ("TreasuryEmissionFee", []),
@@ -122,10 +123,22 @@ def get_emission_params(c_client: TorusClient):
     raw_emission = {
         "recycling_percentage": query_all["EmissionRecyclingPercentage"],
         "treasury_percentage": query_all["TreasuryEmissionFee"],
+        "incentives_ratio": query_all["IncentivesRatio"],
     }
     emission_params = Emission.model_validate(raw_emission)
 
     return emission_params
+
+
+def get_fees(c_client: TorusClient):
+    fees = c_client.query_batch(
+        {
+            "Torus0": [
+                ("FeeConstraints", []),
+            ],
+        }
+    )["FeeConstraints"]
+    return MinFee.model_validate(fees)
 
 
 def get_global_params(c_client: TorusClient):

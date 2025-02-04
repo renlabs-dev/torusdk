@@ -13,7 +13,7 @@ from rich.table import Table
 from torustrateinterface import Keypair
 from typer import Context
 
-from torusdk._common import IPFS_REGEX, TorusSettings, get_node_url
+from torusdk._common import CID_REGEX, TorusSettings, get_node_url
 from torusdk.balance import dict_from_nano, from_rems, to_rems
 from torusdk.client import TorusClient
 from torusdk.errors import InvalidPasswordError, PasswordNotProvidedError
@@ -54,10 +54,10 @@ def merge_models(model_a: T, model_b: BaseModel) -> T:
 
 
 def extract_cid(value: str):
-    cid_hash = re.match(IPFS_REGEX, value)
+    cid_hash = re.match(CID_REGEX, value)
     if not cid_hash:
         raise typer.BadParameter(f"CID provided is invalid: {value}")
-    return cid_hash.group()
+    return cid_hash.group("cid")
 
 
 def input_to_rems(value: float | None):
@@ -277,21 +277,84 @@ def print_table_from_plain_dict(
     console.print(table)
 
 
+def render_pydantic_subtable(value: BaseModel | dict[Any, Any]) -> Table:
+    """
+    Renders a subtable for a nested Pydantic object or dictionary.
+
+    Args:
+        value: A nested Pydantic object or dictionary.
+
+    Returns:
+        A rich Table object representing the subtable.
+    """
+    subtable = Table(
+        show_header=False,
+        padding=(0, 0, 0, 0),
+        border_style="bright_black",
+    )
+    if isinstance(value, BaseModel):
+        for subfield_name, _ in value.model_fields.items():
+            subfield_value = getattr(value, subfield_name)
+            subtable.add_row(f"{subfield_name}: {subfield_value}")
+    else:
+        for subfield_name, subfield_value in value.items():  # type: ignore
+            subtable.add_row(f"{subfield_name}: {subfield_value}")
+    return subtable
+
+
+def render_single_pydantic_object(
+    obj: BaseModel, console: Console, title: str = ""
+) -> None:
+    """
+    Renders a rich table from a single Pydantic object.
+
+    Args:
+        obj: A single Pydantic object.
+        console: The rich Console object.
+        title: Optional title for the table.
+    """
+    table = Table(
+        title=title,
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold magenta",
+    )
+
+    table.add_column("Field", style="white", vertical="middle")
+    table.add_column("Value", style="white", vertical="middle")
+
+    for field_name, _ in obj.model_fields.items():
+        value = getattr(obj, field_name)
+        if isinstance(value, BaseModel):
+            subtable = render_pydantic_subtable(value)
+            table.add_row(field_name, subtable)
+        else:
+            table.add_row(field_name, str(value))
+
+    console.print(table)
+    console.print("\n")
+
+
 def render_pydantic_table(
-    objects: list[T],
+    objects: T | list[T],
     console: Console,
     title: str = "",
     ignored_columns: list[str] = [],
 ) -> None:
     """
-    Renders a rich table from a list of Pydantic objects.
+    Renders a rich table from a list of Pydantic objects or a single Pydantic object.
 
     Args:
-        objects: A list of Pydantic objects.
+        objects: A list of Pydantic objects or a single Pydantic object.
         console: The rich Console object.
         title: Optional title for the table.
+        ignored_columns: List of column names to ignore.
     """
     if not objects:
+        return
+
+    if isinstance(objects, BaseModel):
+        render_single_pydantic_object(objects, console, title)
         return
 
     table = Table(
@@ -313,14 +376,7 @@ def render_pydantic_table(
                 continue
             value = getattr(obj, field_name)
             if isinstance(value, BaseModel):
-                subtable = Table(
-                    show_header=False,
-                    padding=(0, 0, 0, 0),
-                    border_style="bright_black",
-                )
-                for subfield_name, _ in value.model_fields.items():
-                    subfield_value = getattr(value, subfield_name)
-                    subtable.add_row(f"{subfield_name}: {subfield_value}")
+                subtable = render_pydantic_subtable(value)
                 row_data.append(subtable)
             else:
                 row_data.append(str(value))

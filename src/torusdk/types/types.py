@@ -2,11 +2,14 @@
 Common types for the torus module.
 """
 
+import re
 from enum import Enum
-from typing import Any, NewType, TypedDict
+from typing import Any, Literal, NewType, TypedDict
 
 from pydantic import (
+    AnyUrl,
     BaseModel,
+    Field,
     ValidationError,
     field_serializer,
     field_validator,
@@ -14,6 +17,12 @@ from pydantic import (
 
 from torusdk.balance import BalanceUnit, format_balance, from_rems, to_rems
 
+# from torusdk._common import CID_REGEX
+
+CID_REGEX = re.compile(
+    r"^(?:ipfs://)?(?P<cid>Qm[1-9A-HJ-NP-Za-km-z]{44,}|b[A-Za-z2-7]{58,}|B[A-Z2-7]{58,}|z[1-9A-HJ-NP-Za-km-z]{48,}|F[0-9A-F]{50,})(?:/[\d\w.]+)*$"
+)
+AGENT_SHORT_DESCRIPTION_MAX_LENGTH = 100
 Ss58Address = NewType("Ss58Address", str)
 """Substrate SS58 address.
 
@@ -24,7 +33,6 @@ chains.
 .. _SS58 encoded address format:
     https://docs.substrate.io/reference/address-formats/
 """
-
 
 # TODO: replace with dataclasses
 
@@ -114,6 +122,69 @@ class Agent(BaseModel):
     fees: Fee
 
 
+class ApplicationResolved(BaseModel):
+    status: Literal["Resolved"] = "Resolved"
+    accepted: bool
+    resolved_by: Ss58Address
+
+
+class ApplicationRevoked(BaseModel):
+    status: Literal["Revoked"] = "Revoked"
+    previously_accepted_by: Ss58Address
+    revoked_by: Ss58Address
+
+
+class IPFSUrl(AnyUrl):
+    @classmethod
+    def __get_validators__(cls: Any):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v: Any):
+        if not isinstance(v, str):
+            raise TypeError("string required")
+
+        match = CID_REGEX.match(v)
+        if not match:
+            raise ValueError(
+                f"Invalid IPFS URI '{v}', does not match format 'ipfs://\\w+'"
+            )
+
+        cid_txt = match.group("cid")
+        return f"ipfs://{cid_txt}"
+
+
+class Images(BaseModel):
+    icon: IPFSUrl | AnyUrl | None
+    banner: IPFSUrl | AnyUrl | None = None
+
+
+class Socials(BaseModel):
+    discord: AnyUrl | None
+    github: AnyUrl | None
+    telegram: AnyUrl | None
+    twitter: AnyUrl | None
+
+
+class AgentMetadata(BaseModel):
+    title: str
+    short_description: str = Field(
+        ...,
+        description="Agent short description is required",
+        max_length=AGENT_SHORT_DESCRIPTION_MAX_LENGTH,
+    )
+    description: str
+    website: AnyUrl | None
+    images: Images | None
+    socials: Socials | None
+
+    @field_validator("images", mode="before")
+    def validate_images(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        return Images.model_validate(value)
+
+
 class AgentApplication(BaseModel):
     id: int
     payer_key: Ss58Address
@@ -122,7 +193,22 @@ class AgentApplication(BaseModel):
     cost: int
     expires_at: int
     action: str
-    status: str | dict[str, dict[str, bool]]
+    status: (
+        str
+        | dict[str, dict[str, bool]]
+        | ApplicationResolved
+        | ApplicationRevoked
+    )
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def extract_status(cls, data: Any) -> Any:
+        if "Resolved" in data:
+            return ApplicationResolved.model_validate(data["Resolved"])
+        elif "Revoked" in data:
+            return ApplicationRevoked.model_validate(data["Revoked"])
+        else:
+            return data
 
 
 class DisplayGovernanceConfiguration(BaseModel):

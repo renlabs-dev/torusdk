@@ -5,7 +5,7 @@ import typer
 from rich.progress import track
 from typer import Context
 
-from torusdk._common import IPFS_REGEX
+from torusdk._common import CID_REGEX
 from torusdk.balance import to_rems
 from torusdk.cli._common import (
     CustomCtx,
@@ -103,7 +103,7 @@ def add_custom_proposal(ctx: Context, key: str, cid: str):
     Adds a custom proposal.
     """
     context = make_custom_context(ctx)
-    if not re.match(IPFS_REGEX, cid):
+    if not re.match(CID_REGEX, cid):
         context.error(f"CID provided is invalid: {cid}")
         exit(1)
     else:
@@ -221,6 +221,7 @@ def propose_emission(
     cid: str = typer.Argument(..., callback=extract_cid),
     recycling_percentage: Optional[int] = typer.Option(None),
     treasury_percentage: Optional[int] = typer.Option(None),
+    incentives_ratio: Optional[int] = typer.Option(None),
 ):
     local_variables = locals()
     proposal_args = OptionalEmission.model_validate(local_variables)
@@ -231,3 +232,4 @@ def propose_emission(
     proposal = merge_models(emission_params, proposal_args)
     kp = context.load_key(key)
     client.add_emission_proposal(kp, proposal, cid)
+    context.info("Proposal added.")

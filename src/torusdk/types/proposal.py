@@ -97,6 +97,7 @@ class OptionalEmission(BaseModel):
 class Emission(BaseModel):
     recycling_percentage: int = Field(..., ge=0, le=100)
     treasury_percentage: int = Field(..., ge=0, le=100)
+    incentives_ratio: int = Field(..., ge=0, le=100)
 
 
 class GlobalCustom(BaseModel):
@@ -164,7 +165,9 @@ def extract_value(data: Any, key_to_extract: str):
     if not data.get(key_to_extract):
         raise ValueError("Data must contain a 'data' key")
     if not isinstance(data[key_to_extract], dict):
-        raise ValueError("Extracted key must contain a dictionary")
+        value = data[key_to_extract]
+        data[key_to_extract] = {key_to_extract: value}
+        return data
     if len(data.get(key_to_extract)) != 1:
         raise ValueError("Data must contain only one key")
     data[key_to_extract] = [*data[key_to_extract].values()][0]

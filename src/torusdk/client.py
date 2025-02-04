@@ -1181,7 +1181,7 @@ class TorusClient:
 
         params = {
             "name": name,
-            "address": url,
+            "url": url,
             "metadata": metadata,
             "staking_fee": staking_fee,
             "weight_control_fee": weight_control_fee,

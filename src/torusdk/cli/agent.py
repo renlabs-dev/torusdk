@@ -1,12 +1,14 @@
 from typing import Any, Optional, cast
 
 import typer
+from pydantic import ValidationError
 from typer import Context
 
 from torusdk._common import intersection_update
 from torusdk.balance import from_rems
 from torusdk.cli._common import (
     HIDE_FEATURES,
+    extract_cid,
     make_custom_context,
     print_module_info,
     print_table_from_plain_dict,
@@ -14,6 +16,8 @@ from torusdk.cli._common import (
 )
 from torusdk.errors import ChainTransactionError
 from torusdk.misc import get_governance_config, get_map_modules
+from torusdk.types.types import AgentMetadata
+from torusdk.util import get_json_from_cid
 
 agent_app = typer.Typer(no_args_is_help=True)
 
@@ -26,19 +30,29 @@ def register(
     name: str,
     key: str,
     url: str,
-    metadata: str,
+    metadata: str = typer.Argument(..., callback=extract_cid),
 ):
     """
     Registers an agent.
     """
     context = make_custom_context(ctx)
     client = context.com_client()
-
-    if metadata and len(metadata) > 59:
-        raise ValueError("Metadata must be less than 60 characters")
-
+    data = get_json_from_cid(metadata)
+    try:
+        _ = AgentMetadata.model_validate(data)
+    except ValidationError:
+        context.error(
+            "Your ipfs file is invalid. "
+            "You can find the schema definition "
+            "at https://docs.torus.network/agents/register-a-agent"
+        )
+        exit(1)
     resolved_key = context.load_key(key, None)
-
+    burn = client.get_burn()
+    if not context.confirm(
+        f"{from_rems(burn)} tokens will be burned. Do you want to continue?"
+    ):
+        raise typer.Abort()
     with context.progress_status(f"Registering Agent {name}..."):
         response = client.register_agent(
             resolved_key,
@@ -60,7 +74,6 @@ def list_applications(ctx: Context):
     """
     context = make_custom_context(ctx)
     client = context.com_client()
-
     with context.progress_status("Getting applications..."):
         applications = client.query_map_applications()
     if len(applications) == 0:
@@ -140,9 +153,20 @@ def update(
     context = make_custom_context(ctx)
     client = context.com_client()
 
-    if metadata and len(metadata) > 59:
-        raise ValueError("Metadata must be less than 60 characters")
-
+    # if metadata and len(metadata) > 59:
+    #     raise ValueError("Metadata must be less than 60 characters")
+    # TODO: create a validator for agent metadata
+    if metadata:
+        data = get_json_from_cid(metadata)
+        try:
+            _ = AgentMetadata.model_validate(data)
+        except ValidationError:
+            context.error(
+                "Your ipfs file is invalid. "
+                "You can find the schema definition "
+                "at https://docs.torus.network/agents/register-a-agent"
+            )
+            exit(1)
     resolved_key = context.load_key(key)
 
     agents = get_map_modules(client, include_balances=False)
