@@ -5,7 +5,6 @@ from typer import Context
 
 from torusdk.balance import BalanceUnit, format_balance, to_rems
 from torusdk.cli._common import (
-    NOT_IMPLEMENTED_MESSAGE,
     make_custom_context,
     print_table_from_plain_dict,
 )
@@ -236,7 +235,6 @@ def run_faucet(
     num_processes: Optional[int] = None,
     num_executions: int = 1,
 ):
-    raise NotImplementedError("Faucet " + NOT_IMPLEMENTED_MESSAGE)
     context = make_custom_context(ctx)
     use_testnet = ctx.obj.use_testnet
 
@@ -266,6 +264,6 @@ def run_faucet(
                 "faucet",
                 params=params,
                 unsigned=True,
-                module="FaucetModule",
+                module="Faucet",
                 key=resolved_key.ss58_address,  # type: ignore
             )

@@ -1,17 +1,14 @@
-import binascii
 import hashlib
 import math
 import multiprocessing
 import multiprocessing.queues
 import multiprocessing.synchronize
 import os
-import random
 import threading
 from abc import abstractmethod
 from dataclasses import dataclass
 from queue import Empty
-from time import sleep
-from typing import Generic, Optional, TypeVar, cast
+from typing import Generic, Optional, TypeVar, cast, Any, Dict
 
 from Crypto.Hash import keccak
 from torustrateinterface import Keypair
@@ -68,7 +65,7 @@ class GenericQueue(Generic[T]):
 
 
 def _terminate_workers_and_wait_for_exit(
-    workers: list[multiprocessing.Process],
+    workers: list["_Solver"],
 ) -> None:
     """Terminates the worker processes and waits for them to exit.
 
@@ -238,8 +235,8 @@ class _Solver(_SolverBase):
             target=_update_curr_block_worker,
             args=(block_info_box, self.c_client, self.key.public_key),
         ).start()
-        # Start at random nonce
-        nonce_start = random.randint(0, nonce_limit)
+        # Start at random nonce using os.urandom
+        nonce_start = int.from_bytes(os.urandom(8), 'little') % nonce_limit
         nonce_end = nonce_start + self.update_interval
         while not self.stopEvent.is_set():
             # Do a block of nonces
@@ -262,8 +259,8 @@ class _Solver(_SolverBase):
                 self.solution_queue.put(solution)
                 solution = None
 
-            nonce_start = random.randint(0, nonce_limit)
-            nonce_start = nonce_start % nonce_limit
+            # Use os.urandom for next nonce
+            nonce_start = int.from_bytes(os.urandom(8), 'little') % nonce_limit
             nonce_end = nonce_start + self.update_interval
 
 
@@ -289,46 +286,38 @@ def _update_curr_block_worker(
     block_info_box: MutexBox[BlockInfo],
     c_client: TorusClient,
     key_bytes: bytes,
-    sleep_time: int = 16,
 ):
     """
-    Updates the current block information in a separate thread.
+    Updates the current block information using WebSocket subscription.
 
-    This function continuously retrieves the latest block information from the
-    Commune client and updates the block_info_box with the new block number,
-    block hash, and block bytes hashed with the key.
+    This function subscribes to new block headers and updates the block_info_box
+    with the new block information when a new block is received.
 
     Args:
         block_info_box: A MutexBox containing the block information.
-        c_client: The CommuneClient instance used to retrieve block information.
+        c_client: The TorusClient instance used to retrieve block information.
         key_bytes: The key bytes to be hashed with the block.
-        sleep_time: The time (in seconds) to sleep between block updates.
     """
-    while True:
-        new_block = c_client.get_block()
-        new_block_number = cast(int, new_block["header"]["number"])  # type: ignore
-        new_block_hash = new_block["header"]["hash"]  # type: ignore
-        new_block_bytes = bytes.fromhex(new_block_hash[2:])  # type: ignore
+    with c_client.get_conn() as substrate:
+        def on_block_header(obj: Dict[str, Any], update_nr: int, subscription_id: int) -> None:
+            header = obj['header']
+            new_block_number = cast(int, header["number"])
+            # Get block hash from the block itself since it's not in the header
+            block = c_client.get_block(str(new_block_number))  # Convert to string for block_hash parameter
+            if block and "header" in block and "hash" in block["header"]:
+                new_block_hash = block["header"]["hash"]
+                new_block_bytes = bytes.fromhex(new_block_hash[2:])
 
-        with block_info_box as block_info:
-            old_block = block_info.block_number
-        if new_block_number == old_block:
-            pass
-        else:
-            with block_info_box as block_info:
-                block_info.block_number = new_block_number
-                # Hash the block with the key
-                block_and_key_hash_bytes = _hash_block_with_key(
-                    new_block_bytes, key_bytes
-                )
-                byte_list = []
-                for i in range(32):
-                    byte_list: list[int] = []
-                    byte = block_and_key_hash_bytes[i]
-                    byte_list.append(byte)
-                block_info.curr_block = byte_list  # type: ignore
-                block_info.new_info = True
-        sleep(sleep_time)
+                with block_info_box as block_info:
+                    old_block = block_info.block_number
+                    if new_block_number != old_block:
+                        block_info.block_number = new_block_number
+                        block_and_key_hash_bytes = _hash_block_with_key(new_block_bytes, key_bytes)
+                        block_info.curr_block = bytes(block_and_key_hash_bytes[:32])  # Convert to bytes
+                        block_info.block_hash = new_block_hash
+                        block_info.new_info = True
+
+        substrate.subscribe_block_headers(on_block_header) # type: ignore
 
 
 def _update_curr_block(
@@ -371,23 +360,6 @@ def _update_curr_block(
     block_info.block_hash = new_block_hash
     return True, new_block_number
 
-
-def _hex_bytes_to_u8_list(hex_bytes: bytes):
-    """
-    Converts hex bytes to a list of unsigned 8-bit integers.
-
-    Args:
-        hex_bytes: The hex bytes to be converted.
-
-    Returns:
-        A list of unsigned 8-bit integers.
-    """
-    hex_chunks = [
-        int(hex_bytes[i : i + 2], 16) for i in range(0, len(hex_bytes), 2)
-    ]
-    return hex_chunks
-
-
 def _create_seal_hash(block_and_key_hash_bytes: bytes, nonce: int) -> bytes:
     """
     Creates the seal hash using the block and key hash bytes and the nonce.
@@ -399,12 +371,11 @@ def _create_seal_hash(block_and_key_hash_bytes: bytes, nonce: int) -> bytes:
     Returns:
         The seal hash as bytes.
     """
-
-    nonce_bytes = binascii.hexlify(nonce.to_bytes(8, "little"))
-    pre_seal = nonce_bytes + binascii.hexlify(block_and_key_hash_bytes)[:64]
-    seal_sh256 = hashlib.sha256(
-        bytearray(_hex_bytes_to_u8_list(pre_seal))
-    ).digest()
+    # Convert nonce to bytes directly
+    nonce_bytes = nonce.to_bytes(8, 'little')
+    # Concatenate nonce bytes with block hash bytes
+    pre_seal = nonce_bytes + block_and_key_hash_bytes[:32]
+    seal_sh256 = hashlib.sha256(pre_seal).digest()
     kec = keccak.new(digest_bits=256)
     seal = kec.update(seal_sh256).digest()
     return seal
@@ -495,18 +466,16 @@ def solve_for_difficulty_fast(
         c_client: The CommuneClient instance used to retrieve block information.
         key: The Keypair used for signing.
         num_processes: The number of solver processes to create (default: number of CPU cores).
-        update_interval: The interval at which the solvers update their progress (default: 50,000).
+        update_interval: The interval at which the solvers update their progress (default: 500,000).
 
     Returns:
         A POWSolution object if a solution is found, None otherwise.
     """
-
     if num_processes is None:
-        # get the number of allowed processes for this process
         num_processes = max(1, get_cpu_count())
     print(f"Running with {num_processes} cores.")
     if update_interval is None:
-        update_interval = 50_000
+        update_interval = 500_000
 
     limit = int(math.pow(2, 256)) - 1
 
@@ -540,25 +509,30 @@ def solve_for_difficulty_fast(
     ]
 
     for worker in solvers:
-        worker.start()  # start the solver processes
+        worker.start()
 
     solution = None
+    current_block = None
 
     while True:
-        # Wait until a solver finds a solution
         try:
             solution = solution_queue.get(block=True, timeout=0.25)
             if solution is not None:
-                break
+                # Get current block to validate solution
+                current_block = c_client.get_block()
+                if current_block:
+                    current_block_number = cast(int, current_block["header"]["number"])
+                    # Only accept solution if block is not too old (within 3 blocks)
+                    if not solution.is_stale(current_block_number):
+                        break
+                    else:
+                        solution = None
         except Empty:
-            # No solution found, try again
             pass
 
-    # exited while, solution contains the nonce or wallet is registered
-    stopEvent.set()  # stop all other processes
+    stopEvent.set()
     print("Finished")
-    # terminate and wait for all solvers to exit
-    _terminate_workers_and_wait_for_exit(solvers)  # type: ignore
+    _terminate_workers_and_wait_for_exit(solvers)
 
     return solution
 
@@ -572,7 +546,7 @@ if __name__ == "__main__":
     node = get_node_url(use_testnet=True)
     print(node)
     client = TorusClient(node)
-    key = classic_load_key("dev01")
+    key = classic_load_key("dev")
     start_time = time.time()
 
     solution: POWSolution = solve_for_difficulty_fast(client, key, node)
@@ -582,5 +556,12 @@ if __name__ == "__main__":
         "block_number": solution.block_number,
         "nonce": solution.nonce,
         "work": solution.seal,
+        "key": key.ss58_address,
     }
-    client.compose_call("faucet", params=params, key=key)
+    client.compose_call(
+        "faucet",
+        params=params,
+        unsigned=True,
+        module="Faucet",
+        key=key.ss58_address,  # type: ignore
+    )

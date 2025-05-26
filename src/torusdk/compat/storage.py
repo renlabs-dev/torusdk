@@ -62,7 +62,7 @@ def classic_load(
     if body["encrypted"] and password is not None:
         content = decrypt_data(password, body["data"])
     else:
-        content = body["data"]
+        content = body
 
     assert isinstance(body, dict)
     assert isinstance(body["timestamp"], int)

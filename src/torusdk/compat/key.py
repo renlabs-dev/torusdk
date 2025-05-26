@@ -64,7 +64,7 @@ def classic_key_path(name: str) -> str:
     """
 
     home = Path.home()
-    root_path = home / ".commune" / "key"
+    root_path = home / ".torus" / "key"
     name = name + ".json"
     return str(root_path / name)
 
@@ -134,8 +134,7 @@ def classic_load_key(
     Loads the keypair with the given name from a disk.
     """
     path = classic_key_path(name)
-    key_dict_json = classic_load(path, password=password)
-    key_dict = json.loads(key_dict_json)
+    key_dict = classic_load(path, password=password)
     try:
         kp = from_classic_dict(key_dict, from_mnemonic=from_mnemonic)
     except ValueError:
