@@ -46,8 +46,10 @@ class GenericQueue(Generic[T]):
         Generic[T]: The type parameter specifying the type of items in the queue.
     """
 
-    def __init__(self):
-        self._queue = multiprocessing.Queue()  # type: ignore
+    def __init__(self, ctx: Any = None):
+        if ctx is None:
+            ctx = multiprocessing
+        self._queue = ctx.Queue()  # type: ignore
 
     def put(
         self, item: T, block: bool = True, timeout: float | None = None
@@ -100,7 +102,7 @@ class POWSolution:
         return self.block_number < current_block - 3
 
 
-class _SolverBase(multiprocessing.Process):
+class _SolverBase:
     """
     Base class for solver processes.
 
@@ -141,6 +143,7 @@ class _SolverBase(multiprocessing.Process):
         limit: int,
         key: Keypair,
         node_url: str,
+        mp_context: Any = None,
     ):
         """
         Initializes a new instance of the _SolverBase class.
@@ -154,19 +157,42 @@ class _SolverBase(multiprocessing.Process):
             block_info_box: A synchronization primitive to access block information.
             limit: The maximum number of solutions to find.
             key: The keypair used for generating solutions.
+            mp_context: The multiprocessing context to use.
         """
-        multiprocessing.Process.__init__(self, daemon=True)
+        if mp_context is None:
+            mp_context = multiprocessing
+        
+        # Create the process using the correct context
+        self._mp_context = mp_context
+        self._process = mp_context.Process(target=self._run_wrapper, daemon=True)
+        
         self.proc_num = proc_num
         self.num_proc = num_proc
         self.update_interval = update_interval
         self.solution_queue = solution_queue
-        self.newBlockEvent = multiprocessing.Event()  # type: ignore
+        self.newBlockEvent = mp_context.Event()  # type: ignore
         self.newBlockEvent.clear()
         self.block_info_box = block_info_box
         self.stopEvent = stopEvent
         self.limit = limit
         self.key = key
         self.node_url = node_url
+
+    def _run_wrapper(self):
+        """Wrapper method to call the actual run method."""
+        self.run()
+
+    def start(self):
+        """Start the solver process."""
+        self._process.start()
+
+    def terminate(self):
+        """Terminate the solver process."""
+        self._process.terminate()
+
+    def join(self, timeout: float | None = None):
+        """Wait for the solver process to finish."""
+        self._process.join(timeout)
 
     @abstractmethod
     def run(self) -> None:
@@ -479,10 +505,13 @@ def solve_for_difficulty_fast(
 
     limit = int(math.pow(2, 256)) - 1
 
-    stopEvent = multiprocessing.Event()
+    # Use fork method to avoid pickle issues with threading.Lock in MutexBox
+    # This works on both x86 and Apple Silicon
+    mp_context = multiprocessing.get_context('fork')
+    stopEvent = mp_context.Event()
     stopEvent.clear()
 
-    solution_queue: GenericQueue[POWSolution] = GenericQueue[POWSolution]()
+    solution_queue: GenericQueue[POWSolution] = GenericQueue[POWSolution](mp_context)
 
     block_info = MutexBox(BlockInfo(-1, b"", None))
     key_bytes = key.public_key
@@ -504,6 +533,7 @@ def solve_for_difficulty_fast(
             limit,
             key,
             node_url,
+            mp_context,
         )
         for i in range(num_processes)
     ]
@@ -546,7 +576,7 @@ if __name__ == "__main__":
     node = get_node_url(use_testnet=True)
     print(node)
     client = TorusClient(node)
-    key = classic_load_key("dev")
+    key = classic_load_key("mac")
     start_time = time.time()
 
     solution: POWSolution = solve_for_difficulty_fast(client, key, node)
