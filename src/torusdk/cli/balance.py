@@ -1,4 +1,5 @@
 from typing import Optional
+import time
 
 import typer
 from typer import Context
@@ -245,7 +246,7 @@ def run_faucet(
     resolved_key = context.load_key(key, None)
 
     client = context.com_client()
-    for _ in range(num_executions):
+    for i in range(num_executions):
         with context.progress_status("Solving PoW..."):
             solution = solve_for_difficulty_fast(
                 client,
@@ -260,10 +261,16 @@ def run_faucet(
                 "work": solution.seal,
                 "key": resolved_key.ss58_address,
             }
+
             client.compose_call(
                 "faucet",
                 params=params,
                 unsigned=True,
                 module="Faucet",
                 key=resolved_key.ss58_address,  # type: ignore
+                wait_for_inclusion=False,
             )
+
+        if i < num_executions - 1:
+            context.info("Waiting 5 seconds before next execution...")
+            time.sleep(5)
