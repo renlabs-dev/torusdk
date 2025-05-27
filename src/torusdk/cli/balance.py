@@ -267,7 +267,7 @@ def run_faucet(
                 params=params,
                 unsigned=True,
                 module="Faucet",
-                key=resolved_key.ss58_address,  # type: ignore
+                key=resolved_key,
                 wait_for_inclusion=False,
             )
 

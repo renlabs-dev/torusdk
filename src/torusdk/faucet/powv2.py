@@ -8,7 +8,7 @@ import threading
 from abc import abstractmethod
 from dataclasses import dataclass
 from queue import Empty
-from typing import Generic, Optional, TypeVar, cast, Any, Dict
+from typing import Any, Dict, Generic, Optional, TypeVar, cast
 
 from Crypto.Hash import keccak
 from torustrateinterface import Keypair
