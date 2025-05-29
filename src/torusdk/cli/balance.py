@@ -237,8 +237,8 @@ SLEEP_BETWEEN_FAUCET_EXECUTIONS = 8
 def run_faucet(
     ctx: Context,
     key: str,
-    num_processes: Optional[int] = None,
-    num_executions: int = 1,
+    jobs: Optional[int] = None,
+    repeat: int = 1,
 ):
     context = make_custom_context(ctx)
     use_testnet = ctx.obj.use_testnet
@@ -250,13 +250,13 @@ def run_faucet(
     resolved_key = context.load_key(key, None)
 
     client = context.com_client()
-    for _ in range(num_executions):
+    for _i in range(repeat):
         with context.progress_status("Solving PoW..."):
             solution = solve_for_difficulty_fast(
                 client,
                 resolved_key,
                 client.url,
-                num_processes=num_processes,
+                num_processes=jobs,
             )
         with context.progress_status("Sending solution to blockchain"):
             params = {
