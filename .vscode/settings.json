@@ -1,22 +1,26 @@
 {
     "cSpell.words": [
         "COMAI",
-        "torus",
         "dmap",
         "fastapi",
         "keypair",
+        "nacl",
         "netuid",
         "openai",
         "PKCS",
         "pydantic",
+        "torus",
         "torustrateinterface",
         "typer",
         "unstake",
+        "urandom",
         "uvicorn"
     ],
     // "python.analysis.extraPaths": ["./sources"],
-    
-    "python.analysis.extraPaths": ["/home/manjairo/tcheco/torustrate-interface"],
+
+    "python.analysis.extraPaths": [
+        "/home/manjairo/tcheco/torustrate-interface"
+    ],
     "python.autoComplete.extraPaths": [
         "/home/manjairo/tcheco/torustrate-interface"
     ]

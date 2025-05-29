@@ -46,10 +46,10 @@ class GenericQueue(Generic[T]):
         Generic[T]: The type parameter specifying the type of items in the queue.
     """
 
-    def __init__(self, ctx: Any = None):
-        if ctx is None:
-            ctx = multiprocessing
-        self._queue = ctx.Queue()  # type: ignore
+    def __init__(self, mp_context: Any = None):
+        if mp_context is None:
+            mp_context = multiprocessing
+        self._queue = mp_context.Queue()  # type: ignore
 
     def put(
         self, item: T, block: bool = True, timeout: float | None = None
@@ -161,11 +161,13 @@ class _SolverBase:
         """
         if mp_context is None:
             mp_context = multiprocessing
-        
+
         # Create the process using the correct context
         self._mp_context = mp_context
-        self._process = mp_context.Process(target=self._run_wrapper, daemon=True)
-        
+        self._process = mp_context.Process(
+            target=self._run_wrapper, daemon=True
+        )
+
         self.proc_num = proc_num
         self.num_proc = num_proc
         self.update_interval = update_interval
@@ -262,7 +264,7 @@ class _Solver(_SolverBase):
             args=(block_info_box, self.c_client, self.key.public_key),
         ).start()
         # Start at random nonce using os.urandom
-        nonce_start = int.from_bytes(os.urandom(8), 'little') % nonce_limit
+        nonce_start = int.from_bytes(os.urandom(8), "little") % nonce_limit
         nonce_end = nonce_start + self.update_interval
         while not self.stopEvent.is_set():
             # Do a block of nonces
@@ -286,7 +288,7 @@ class _Solver(_SolverBase):
                 solution = None
 
             # Use os.urandom for next nonce
-            nonce_start = int.from_bytes(os.urandom(8), 'little') % nonce_limit
+            nonce_start = int.from_bytes(os.urandom(8), "little") % nonce_limit
             nonce_end = nonce_start + self.update_interval
 
 
@@ -325,11 +327,16 @@ def _update_curr_block_worker(
         key_bytes: The key bytes to be hashed with the block.
     """
     with c_client.get_conn() as substrate:
-        def on_block_header(obj: Dict[str, Any], update_nr: int, subscription_id: int) -> None:
-            header = obj['header']
+
+        def on_block_header(
+            obj: Dict[str, Any], update_nr: int, subscription_id: int
+        ) -> None:
+            header = obj["header"]
             new_block_number = cast(int, header["number"])
             # Get block hash from the block itself since it's not in the header
-            block = c_client.get_block(str(new_block_number))  # Convert to string for block_hash parameter
+            block = c_client.get_block(
+                str(new_block_number)
+            )  # Convert to string for block_hash parameter
             if block and "header" in block and "hash" in block["header"]:
                 new_block_hash = block["header"]["hash"]
                 new_block_bytes = bytes.fromhex(new_block_hash[2:])
@@ -338,12 +345,16 @@ def _update_curr_block_worker(
                     old_block = block_info.block_number
                     if new_block_number != old_block:
                         block_info.block_number = new_block_number
-                        block_and_key_hash_bytes = _hash_block_with_key(new_block_bytes, key_bytes)
-                        block_info.curr_block = bytes(block_and_key_hash_bytes[:32])  # Convert to bytes
+                        block_and_key_hash_bytes = _hash_block_with_key(
+                            new_block_bytes, key_bytes
+                        )
+                        block_info.curr_block = bytes(
+                            block_and_key_hash_bytes[:32]
+                        )  # Convert to bytes
                         block_info.block_hash = new_block_hash
                         block_info.new_info = True
 
-        substrate.subscribe_block_headers(on_block_header) # type: ignore
+        substrate.subscribe_block_headers(on_block_header)  # type: ignore
 
 
 def _update_curr_block(
@@ -386,6 +397,7 @@ def _update_curr_block(
     block_info.block_hash = new_block_hash
     return True, new_block_number
 
+
 def _create_seal_hash(block_and_key_hash_bytes: bytes, nonce: int) -> bytes:
     """
     Creates the seal hash using the block and key hash bytes and the nonce.
@@ -398,7 +410,7 @@ def _create_seal_hash(block_and_key_hash_bytes: bytes, nonce: int) -> bytes:
         The seal hash as bytes.
     """
     # Convert nonce to bytes directly
-    nonce_bytes = nonce.to_bytes(8, 'little')
+    nonce_bytes = nonce.to_bytes(8, "little")
     # Concatenate nonce bytes with block hash bytes
     pre_seal = nonce_bytes + block_and_key_hash_bytes[:32]
     seal_sh256 = hashlib.sha256(pre_seal).digest()
@@ -507,11 +519,13 @@ def solve_for_difficulty_fast(
 
     # Use fork method to avoid pickle issues with threading.Lock in MutexBox
     # This works on both x86 and Apple Silicon
-    mp_context = multiprocessing.get_context('fork')
+    mp_context = multiprocessing.get_context("fork")
     stopEvent = mp_context.Event()
     stopEvent.clear()
 
-    solution_queue: GenericQueue[POWSolution] = GenericQueue[POWSolution](mp_context)
+    solution_queue: GenericQueue[POWSolution] = GenericQueue[POWSolution](
+        mp_context
+    )
 
     block_info = MutexBox(BlockInfo(-1, b"", None))
     key_bytes = key.public_key
@@ -551,7 +565,9 @@ def solve_for_difficulty_fast(
                 # Get current block to validate solution
                 current_block = c_client.get_block()
                 if current_block:
-                    current_block_number = cast(int, current_block["header"]["number"])
+                    current_block_number = cast(
+                        int, current_block["header"]["number"]
+                    )
                     # Only accept solution if block is not too old (within 3 blocks)
                     if not solution.is_stale(current_block_number):
                         break
@@ -571,12 +587,12 @@ if __name__ == "__main__":
     import time
 
     from torusdk._common import get_node_url
-    from torusdk.compat.key import classic_load_key
+    from torusdk.key import load_keypair
 
     node = get_node_url(use_testnet=True)
     print(node)
     client = TorusClient(node)
-    key = classic_load_key("mac")
+    key = load_keypair("dev01")
     start_time = time.time()
 
     solution: POWSolution = solve_for_difficulty_fast(client, key, node)
@@ -593,5 +609,5 @@ if __name__ == "__main__":
         params=params,
         unsigned=True,
         module="Faucet",
-        key=key.ss58_address,  # type: ignore
+        key=key,
     )

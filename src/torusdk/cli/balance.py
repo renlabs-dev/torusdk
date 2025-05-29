@@ -1,5 +1,5 @@
-from typing import Optional
 import time
+from typing import Optional
 
 import typer
 from typer import Context
