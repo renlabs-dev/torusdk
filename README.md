@@ -145,7 +145,7 @@ torus misc circulating-supply
 ```sh
 # This command will send 15 TOR to the key-name address.
 # This command is only available on testnet.
-torus --testnet balance run-faucet key-name
+torus --testnet balance run-faucet <key-name>
 ```
 
 ## Completions
