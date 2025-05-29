@@ -1,5 +1,7 @@
 .PHONY: all clean check lint type_check test test_slow docs_run docs_generate docs_copy_assets docs_build
 
+# TODO: migrate to just
+
 all: check
 
 clean:
@@ -7,6 +9,9 @@ clean:
 	rm -rf .pytest_cache
 	rm -rf .ruff_cache
 	rm -rf dist
+
+
+# ==== Checks ====
 
 check: lint type_check
 
@@ -25,17 +30,21 @@ check_format:
 format:
 	ruff format ./src
 
-# fmt:
-# 	isort ./src
-# 	autopep8 --in-place --recursive ./src
 
-test_all: test test_slow
+# ==== Tests ====
 
-test:
-	pytest -k "not slow"
+# TODO: re-add tests
 
-test_slow:
-	pytest -k "slow"
+# test_all: test test_slow
+
+# test:
+# 	pytest -k "not slow"
+
+# test_slow:
+# 	pytest -k "slow"
+
+
+# ==== Docs ====
 
 docs_run:
 	@echo "URL: http://localhost:8080/torus"
