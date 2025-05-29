@@ -94,16 +94,16 @@ torus balance show 5FgfC2DY4yreEWEughz46RZYQ8oBhHVqD9fVq6gV89E6z4Ea
 ### Creating a Key
 
 ```sh
-torus key create key_name
+torus key create <key_name>
 ```
 
 ### Retrieving Key Info
 
 ```sh
-torus key show key_name
+torus key show <key_name>
 
 # Add the `--show-private` flag to show sensitive fields like private key.
-torus key show key_name --show-private
+torus key show <key_name> --show-private
 ```
 
 ### Listing Keys
