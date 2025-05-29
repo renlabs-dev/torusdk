@@ -229,6 +229,10 @@ def unstake(ctx: Context, key: str, amount: float, dest: str):
         raise ChainTransactionError(response.error_message)  # type: ignore
 
 
+# Ammount of seconds to wait between faucet executions
+SLEEP_BETWEEN_FAUCET_EXECUTIONS = 8
+
+
 @balance_app.command()
 def run_faucet(
     ctx: Context,
@@ -246,7 +250,7 @@ def run_faucet(
     resolved_key = context.load_key(key, None)
 
     client = context.com_client()
-    for i in range(num_executions):
+    for _ in range(num_executions):
         with context.progress_status("Solving PoW..."):
             solution = solve_for_difficulty_fast(
                 client,
@@ -271,6 +275,7 @@ def run_faucet(
                 wait_for_inclusion=False,
             )
 
-        if i < num_executions - 1:
-            context.info("Waiting 5 seconds before next execution...")
-            time.sleep(5)
+        context.info(
+            f"Waiting {SLEEP_BETWEEN_FAUCET_EXECUTIONS} seconds before next execution..."
+        )
+        time.sleep(SLEEP_BETWEEN_FAUCET_EXECUTIONS)
