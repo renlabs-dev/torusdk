@@ -5,10 +5,10 @@ from pathlib import Path
 from time import time
 from typing import TypeGuard
 
+import torustrateinterface.utils.ss58 as ss58
 from nacl.exceptions import CryptoError
 from pydantic import BaseModel
 from torustrateinterface import Keypair
-from torustrateinterface.utils import ss58
 
 from torusdk._common import SS58_FORMAT
 from torusdk.encryption import (
@@ -115,7 +115,8 @@ def is_ss58_address(
         True if the address is valid, False otherwise.
     """
 
-    return ss58.is_valid_ss58_address(address, valid_ss58_format=ss58_format)
+    # ? Weird type error
+    return ss58.is_valid_ss58_address(address, valid_ss58_format=ss58_format)  # type: ignore
 
 
 def check_ss58_address(

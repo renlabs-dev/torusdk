@@ -47,6 +47,7 @@ poetry add torusdk
 ## Installation with Nix
 
 To install `torus` the torus cli with Nix
+
 ```sh
 nix profile install .
 ```
@@ -60,7 +61,6 @@ The `torus` offers a variety of features for token management and agent interact
 - Token operations such as transferring and staking
 - Agent management for registration, curation and updates
 - Participation in governance processes
-
 
 ## CLI Usage
 
@@ -138,6 +138,14 @@ torus network params
 ```sh
 # Gets all tokens then were ever emitted minus burned tokens.
 torus misc circulating-supply
+```
+
+### Acquiring Tokens from a Testnet Faucet
+
+```sh
+# This command will send 15 TOR to the key-name address.
+# This command is only available on testnet.
+torus --testnet balance run-faucet <key-name>
 ```
 
 ## Completions

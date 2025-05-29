@@ -1,3 +1,4 @@
+import time
 from typing import Optional
 
 import typer
@@ -5,7 +6,6 @@ from typer import Context
 
 from torusdk.balance import BalanceUnit, format_balance, to_rems
 from torusdk.cli._common import (
-    NOT_IMPLEMENTED_MESSAGE,
     make_custom_context,
     print_table_from_plain_dict,
 )
@@ -229,14 +229,17 @@ def unstake(ctx: Context, key: str, amount: float, dest: str):
         raise ChainTransactionError(response.error_message)  # type: ignore
 
 
+# Ammount of seconds to wait between faucet executions
+SLEEP_BETWEEN_FAUCET_EXECUTIONS = 8
+
+
 @balance_app.command()
 def run_faucet(
     ctx: Context,
     key: str,
-    num_processes: Optional[int] = None,
-    num_executions: int = 1,
+    jobs: Optional[int] = None,
+    repeat: int = 1,
 ):
-    raise NotImplementedError("Faucet " + NOT_IMPLEMENTED_MESSAGE)
     context = make_custom_context(ctx)
     use_testnet = ctx.obj.use_testnet
 
@@ -247,13 +250,13 @@ def run_faucet(
     resolved_key = context.load_key(key, None)
 
     client = context.com_client()
-    for _ in range(num_executions):
+    for _i in range(repeat):
         with context.progress_status("Solving PoW..."):
             solution = solve_for_difficulty_fast(
                 client,
                 resolved_key,
                 client.url,
-                num_processes=num_processes,
+                num_processes=jobs,
             )
         with context.progress_status("Sending solution to blockchain"):
             params = {
@@ -262,10 +265,17 @@ def run_faucet(
                 "work": solution.seal,
                 "key": resolved_key.ss58_address,
             }
+
             client.compose_call(
                 "faucet",
                 params=params,
                 unsigned=True,
-                module="FaucetModule",
-                key=resolved_key.ss58_address,  # type: ignore
+                module="Faucet",
+                key=resolved_key,
+                wait_for_inclusion=False,
             )
+
+        context.info(
+            f"Waiting {SLEEP_BETWEEN_FAUCET_EXECUTIONS} seconds before next execution..."
+        )
+        time.sleep(SLEEP_BETWEEN_FAUCET_EXECUTIONS)
