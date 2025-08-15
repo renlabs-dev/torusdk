@@ -5,7 +5,7 @@ description = "Torus official Python SDK / CLI"
 authors = [{ name = "Renlabs", email = "contact@renlabs.dev" }]
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10,<3.13"
 classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
