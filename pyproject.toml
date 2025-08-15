@@ -1,13 +1,89 @@
-[tool.poetry]
+[project]
 name = "torusdk"
 version = "0.2.4.1"
-description = "Torus network official CLI"
-authors = ["renlabs <info@agicommies.org>"]
-license = "MIT"
+description = "Torus official Python SDK / CLI"
+authors = [{ name = "Renlabs", email = "contact@renlabs.dev" }]
+license = { text = "MIT" }
 readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+]
 
-[tool.poetry.scripts]
+dependencies = [
+    # Substrate
+    # "substrate-interface>=1.7.4",
+    "torustrateinterface>=0.1.0",
+    "scalecodec>=1.2.7",
+    "py-sr25519-bindings>=0.2.0",
+    # Typing/Modeling/Validation
+    "pydantic>=2.6.4",
+    "pydantic-settings>=2.2.1",
+    "typeguard>=4.2.1",
+    # CLI
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    # HTTP
+    "aiohttp>=3.9.3",
+    "fastapi>=0.110.0",
+    "starlette>=0.36.3",
+    "uvicorn>=0.29.0",
+    "keylimiter>=0.1.5",
+    # Cryptography
+    "cryptography>=43.0.3",
+]
+
+[project.scripts]
 torus = "torusdk.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    # Linting & Formatting
+    "ruff>=0.7.0",
+    # Type-checking
+    "basedpyright>=1.19.0",
+    # Testing
+    "pytest>=7.4.2",
+    "pytest-cov>=4.1.0",
+    # Release management
+    "towncrier>=24.8.0",
+    # Debugging
+    "ipython>=8.22.2",
+]
+examples = ["openai>=1.13.3"]
+docs = ["pdoc>=14.3.0"]
+
+
+[tool.uv]
+default-groups = ["dev", "docs", "examples"]
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+testpaths = "./tests"
+pythonpath = ["."]
+
+
+[tool.basedpyright]
+# strict = ["src"]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = "none"
+reportUnusedVariable = "warning"
+
+
+[tool.ruff]
+line-length = 80
+indent-width = 4
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = ["F841"]
+
 
 # configure autopep to not format type ignores !!!
 [tool.autopep8]
@@ -21,78 +97,57 @@ ignore = [
     "E501", # line too long
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<4.0"
 
-torustrateinterface = "^0.1.0"
-# Substrate
-# substrate-interface = "^1.7.4"
-scalecodec = "^1.2.7"
-py-sr25519-bindings = "^0.2.0"
-# Typing/Modeling/Validation
-pydantic = "^2.6.4"
-pydantic-settings = "^2.2.1"
-typeguard = "^4.2.1"
-# CLI
-typer = "^0.9.0"
-rich = "^13.7.0"
-# HTTP
-aiohttp = "^3.9.3"
-fastapi = "^0.110.0"
-starlette = "^0.36.3"
-uvicorn = "^0.29.0"
-keylimiter = "^0.1.5"
-# Cryptography
-cryptography = "^43.0.3"
+[tool.towncrier]
+directory = "changes"
+filename = "CHANGELOG.md"
+package = "torusdk"
+title_format = "## {version} ({project_date})"
 
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Features"
+showcontent = true
 
-[tool.poetry.group.dev]
-optional = true
+[[tool.towncrier.type]]
+directory = "bugfix"
+name = "Bug Fixes"
+showcontent = true
 
-[tool.poetry.group.dev.dependencies]
-# Type-checking
-pyright = "^1.1.390"
-# Testing
-pytest = "^7.4.2"
-# Linter
-#ruff = "^0.1.15"
-# Debugging
-ipython = "^8.22.2"
+[[tool.towncrier.type]]
+directory = "doc"
+name = "Documentation"
+showcontent = true
 
+[[tool.towncrier.type]]
+directory = "removal"
+name = "Removals"
+showcontent = true
 
-[tool.poetry.group.examples]
-optional = true
-[tool.poetry.group.examples.dependencies]
-openai = "^1.13.3"
+[[tool.towncrier.type]]
+directory = "misc"
+name = "Miscellaneous"
+showcontent = true
 
+[[tool.towncrier.type]]
+directory = "security"
+name = "Security"
+showcontent = true
 
-[tool.poetry.group.docs]
-optional = true
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "src/torusdk/cli/__main__.py"]
 
-[tool.poetry.group.docs.dependencies]
-pdoc = "^14.3.0"
-
-
-[tool.pytest.ini_options]
-addopts = ["--import-mode=importlib"]
-testpaths = "./tests"
-pythonpath = ["."]
-
-[tool.pyright]
-# strict = ["src"]
-typeCheckingMode = "strict"
-reportMissingTypeStubs = "none"
-reportUnusedVariable = "warning"
-
-[tool.ruff]
-line-length = 80
-indent-width = 4
-target-version = "py310"
-
-[tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
-ignore = ["F841"]
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

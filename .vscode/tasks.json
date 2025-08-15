@@ -4,20 +4,24 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "pyright file",
+            "label": "typecheck file",
             "type": "shell",
-            "command": "pyright ${file}"
+            "command": "basedpyright ${file}"
         },
         {
-            "label": "autopep8 file",
+            "label": "format file",
             "type": "shell",
-            "command": "autopep8 --in-place --aggressive --aggressive ${file}"
+            "command": "ruff format ${file}"
         },
         {
-            "label": "isort file",
+            "label": "lint file",
             "type": "shell",
-            "command": "isort ${file}"
+            "command": "ruff check --fix ${file}"
         },
-
+        {
+            "label": "run tests",
+            "type": "shell",
+            "command": "just test"
+        }
     ]
 }

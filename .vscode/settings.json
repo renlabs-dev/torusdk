@@ -1,19 +1,25 @@
 {
     "cSpell.words": [
+        "aiohttp",
+        "basedpyright",
         "dmap",
         "fastapi",
         "keypair",
         "netuid",
         "openai",
+        "pdoc",
         "pydantic",
         "pyproject",
+        "subtable",
         "torus",
         "torustrateinterface",
+        "towncrier",
+        "typeguard",
         "typer",
         "unstake",
         "uvicorn"
     ],
-    // "python.analysis.extraPaths": ["./sources"],
+    "python.analysis.typeCheckingMode": "off",
     "python.autoComplete.extraPaths": [
         "/home/manjairo/tcheco/torustrate-interface"
     ]
