@@ -1,8 +1,10 @@
 {
     "recommendations": [
-        "editorconfig.editorconfig",
-        "jnoortheen.nix-ide",
+        "skellock.just",
+        // Python
         "ms-python.python",
+        "ms-python.debugpy",
+        "detachhead.basedpyright",
         "charliermarsh.ruff"
     ]
 }

@@ -12,8 +12,8 @@ development. To learn more [visit docs](https://docs.torus.network/installation/
 
 - [Torus CLI](#torus-cli)
   - [Contents](#contents)
-  - [Installation with `pip`](#installation-with-pip)
-  - [Installation with Nix](#installation-with-nix)
+  - [Installation with pip](#installation-with-pip)
+  <!-- - [Installation with Nix](#installation-with-nix) -->
   - [Features](#features)
   - [CLI Usage](#cli-usage)
   - [Examples](#examples)
@@ -28,9 +28,9 @@ development. To learn more [visit docs](https://docs.torus.network/installation/
   - [Completions](#completions)
   - [Contributing](#contributing)
 
-## Installation with `pip`
+## Installation with pip
 
-Requirements: Python 3.10+
+Requirements: Python 3.11+
 
 Install the `torus` Python package directly with `pip`:
 
@@ -44,13 +44,13 @@ Or add it to your Poetry project with:
 poetry add torusdk
 ```
 
-## Installation with Nix
+<!-- ## Installation with Nix
 
 To install `torus` the torus cli with Nix
 
 ```sh
 nix profile install .
-```
+``` -->
 
 ## Features
 
@@ -169,17 +169,43 @@ To report a bug or request a feature, please [open an issue on GitHub].
 If you have any questions, feel free to ask on the [CLI Discord channel] or
 post on our [GitHub discussions page].
 
-To contribute to the codebase, using Poetry you can install the development dependencies with:
+### Development Setup
+
+This project uses modern Python tooling with UV for fast dependency management.
+
+#### Quick Start
 
 ```sh
-poetry install --with dev
+# Install UV and Just
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create environment and install dependencies
+uv venv
+uv sync
+
+# Run linting and type checking
+just ci
+
+# View all available commands
+just --list
 ```
 
-it can [require some environment-specific binaries to be installed][ruff-installation]
+#### With Nix (Alternative)
+
+```sh
+# Enter Nix development shell (includes UV and Just)
+nix develop
+
+# Install dependencies
+just install
+
+# Run development commands
+just ci
+```
+
+For comprehensive development documentation, see [CLAUDE.md](./CLAUDE.md).
 
 ---
 
 [open an issue on GitHub]: https://github.com/renlabs-dev/torus/issues/new/choose
-[torus Discord channel]: https://go.renlabs-dev.org/torus-channel
 [GitHub discussions page]: https://github.com/renlabs-dev/torus/discussions
-[ruff-installation]: https://docs.astral.sh/ruff/installation/

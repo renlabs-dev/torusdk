@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - "justfile"
+      - "nix/**"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/check-code.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    # Ubicloud managed runner
+    runs-on: ubicloud-standard-2
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv (with caching)
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          ignore-nothing-to-cache: true
+
+      - name: Install Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install just
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y just
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Lint & Format (via just)
+        run: just lint
+
+      - name: Typecheck (via just)
+        run: just typecheck
+
+      - name: Test (via just)
+        run: just test
+
+      - name: Coverage (via just)
+        run: just cov
+
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+      - name: Enforce Towncrier fragment on PRs
+        if: ${{ github.event_name == 'pull_request' }}
+        run: just news-check
+
+      - name: Build package
+        run: just build
+
+  # Separate job for Nix-specific checks
+  nix-checks:
+    runs-on: ubicloud-standard-2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Check Nix flake
+        run: nix flake check
