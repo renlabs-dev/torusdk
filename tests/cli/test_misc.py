@@ -1,6 +1,5 @@
 from unittest.mock import Mock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from torusdk.cli.misc import misc_app
