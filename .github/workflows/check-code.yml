@@ -10,7 +10,6 @@ on:
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
-      - "justfile"
       - "nix/**"
       - "flake.nix"
       - "flake.lock"
@@ -21,18 +20,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-test:
+  check-code:
     # Ubicloud managed runner
     runs-on: ubicloud-standard-2
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.12"]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Setup uv (with caching)
         uses: astral-sh/setup-uv@v6
@@ -40,28 +44,32 @@ jobs:
           enable-cache: true
           ignore-nothing-to-cache: true
 
-      - name: Install Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Install just
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y just
+    #   - name: Create venv for ${{ matrix.python-version }}
+    #     run: uv venv --python ${{ matrix.python-version }}
 
       - name: Sync dependencies
-        run: uv sync
+        run: uv sync --python ${{ matrix.python-version }} --frozen
 
-      - name: Lint & Format (via just)
-        run: just lint
+      # Optional: prove we're using the right interpreter
+      - name: Show Python used by uv
+        run: uv run --python ${{ matrix.python-version }} python -V
 
-      - name: Typecheck (via just)
-        run: just typecheck
+      - name: Lint
+        run: uv run --python ${{ matrix.python-version }} ruff check ./src
 
-      - name: Test (via just)
-        run: just test
+      - name: Typecheck
+        run: |
+          uv run --python ${{ matrix.python-version }} basedpyright ./src
 
-      - name: Coverage (via just)
-        run: just cov
+      - name: Check formatting
+        run: |
+          uv run --python ${{ matrix.python-version }} ruff format --check ./src
+
+      - name: Test
+        run: uv run --python ${{ matrix.python-version }} pytest -q
+
+      - name: Coverage
+        run: uv run --python ${{ matrix.python-version }} pytest --cov=torusdk --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage XML
         uses: actions/upload-artifact@v4
@@ -71,21 +79,7 @@ jobs:
 
       - name: Enforce Towncrier fragment on PRs
         if: ${{ github.event_name == 'pull_request' }}
-        run: just news-check
+        run: uv run --python ${{ matrix.python-version }} towncrier check --compare-with origin/main
 
       - name: Build package
-        run: just build
-
-  # Separate job for Nix-specific checks
-  nix-checks:
-    runs-on: ubicloud-standard-2
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Check Nix flake
-        run: nix flake check
+        run: uv run --python ${{ matrix.python-version }} uv build

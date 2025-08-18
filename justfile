@@ -45,24 +45,24 @@ update:
 
 # ==== Code Quality ====
 
-# Format + autofix lint where possible (developer use)
-fmt:
-    uv run ruff format ./src
-    uv run ruff check --fix ./src
-
-# Check formatting without changing files (CI use)
+# Check formatting without changing files
 fmt-check:
     uv run ruff format --check ./src
-    uv run ruff check ./src
+
+# Format files
+fmt:
+    uv run ruff format ./src
 
 # Static analysis: lints + types (CI and local)
-lint: fmt-check
+lint:
     uv run ruff check ./src
-    uv run basedpyright ./src
 
-# Only run type checker (useful locally)
+# Run typechecker
 typecheck:
     uv run basedpyright ./src
+
+# Run all checks
+check: lint typecheck fmt-check
 
 # ==== Tests & Coverage ====
 
