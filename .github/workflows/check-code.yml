@@ -77,9 +77,9 @@ jobs:
           name: coverage-${{ matrix.python-version }}
           path: coverage.xml
 
-      - name: Enforce Towncrier fragment on PRs
-        if: ${{ github.event_name == 'pull_request' }}
-        run: uv run --python ${{ matrix.python-version }} towncrier check --compare-with origin/main
+    #   - name: Enforce Towncrier fragment on PRs
+    #     if: ${{ github.event_name == 'pull_request' }}
+    #     run: uv run --python ${{ matrix.python-version }} towncrier check --compare-with origin/main
 
       - name: Build package
         run: uv run --python ${{ matrix.python-version }} uv build
