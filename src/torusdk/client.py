@@ -1964,7 +1964,9 @@ class TorusClient:
 
     def query_map_weights(
         self, extract_value: bool = False
-    ) -> dict[Ss58Address, dict[str, list[tuple[Ss58Address, int]] | int]] | None:
+    ) -> (
+        dict[Ss58Address, dict[str, list[tuple[Ss58Address, int]] | int]] | None
+    ):
         """
         Retrieves a mapping of weights for keys on the network.
 

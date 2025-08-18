@@ -1,7 +1,6 @@
 import hashlib
 import math
 import multiprocessing
-import multiprocessing.queues
 import multiprocessing.synchronize
 import os
 import threading

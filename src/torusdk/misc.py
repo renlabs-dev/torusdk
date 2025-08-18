@@ -143,7 +143,7 @@ def get_fees(c_client: TorusClient):
 
 def get_global_params(c_client: TorusClient):
     """
-    Returns global parameters of the whole commune ecosystem
+    Returns global parameters of the whole Torus network
     """
 
     query_all = c_client.query_batch(

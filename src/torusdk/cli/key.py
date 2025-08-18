@@ -55,7 +55,6 @@ def create(
     """
     context = make_custom_context(ctx)
 
-
     if key_name_exists(name):
         context.info(f"WARNING! Key '{name}' already exists", style="bold")
         if not context.confirm("Are you sure you want to override it?"):

@@ -30,8 +30,7 @@ from torusdk.types.types import (
 )
 
 NOT_IMPLEMENTED_MESSAGE = (
-    "method not available. "
-    "It's going to be rolled out in the coming updates."
+    "method not available. It's going to be rolled out in the coming updates."
 )
 
 HIDE_FEATURES = False
@@ -315,7 +314,7 @@ def render_pydantic_subtable(value: BaseModel | dict[Any, Any]) -> Table:
         border_style="bright_black",
     )
     if isinstance(value, BaseModel):
-        for subfield_name, _ in value.model_fields.items():
+        for subfield_name, _ in value.__class__.model_fields.items():
             subfield_value = getattr(value, subfield_name)
             subtable.add_row(f"{subfield_name}: {subfield_value}")
     else:
@@ -345,7 +344,7 @@ def render_single_pydantic_object(
     table.add_column("Field", style="white", vertical="middle")
     table.add_column("Value", style="white", vertical="middle")
 
-    for field_name, _ in obj.model_fields.items():
+    for field_name, _ in obj.__class__.model_fields.items():
         value = getattr(obj, field_name)
         if isinstance(value, BaseModel):
             subtable = render_pydantic_subtable(value)
@@ -386,14 +385,14 @@ def render_pydantic_table(
         title_style="bold magenta",
     )
 
-    for field_name, _ in objects[0].model_fields.items():
+    for field_name, _ in objects[0].__class__.model_fields.items():
         if field_name in ignored_columns:
             continue
         table.add_column(field_name, style="white", vertical="middle")
 
     for obj in objects:
         row_data: list[str | Table] = []
-        for field_name, _ in obj.model_fields.items():
+        for field_name, _ in obj.__class__.model_fields.items():
             if field_name in ignored_columns:
                 continue
             value = getattr(obj, field_name)
@@ -486,11 +485,11 @@ def print_module_info(
     )
 
     to_exclude = ["stake_from", "regblock"]
-    tranformed_modules = transform_module_into(
+    transformed_modules = transform_module_into(
         to_exclude, last_block, immunity_period, agents
     )
 
-    sample_mod = tranformed_modules[0]
+    sample_mod = transformed_modules[0]
     for key in sample_mod.keys():
         # add columns
         table.add_column(key, style="white")
@@ -498,7 +497,7 @@ def print_module_info(
     total_stake = 0
     total_balance = 0
 
-    for mod in tranformed_modules:
+    for mod in transformed_modules:
         total_stake += mod["stake"]
         if mod.get("balance") is not None:
             total_balance += mod["balance"]
@@ -520,7 +519,7 @@ def get_universal_password(ctx: CustomCtx) -> str:
     return universal_password
 
 
-def tranform_network_params(params: dict[str, Any]):
+def transform_network_params(params: dict[str, Any]):
     """Transform network params to be human readable."""
     params_ = params
     general_params = dict_from_nano(
