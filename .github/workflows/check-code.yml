@@ -1,0 +1,88 @@
+name: Check Code
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, test-ci]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "nix/**"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/check-code.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-code:
+    # Ubicloud managed runner
+    runs-on: ubicloud-standard-2
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup uv (with caching)
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          ignore-nothing-to-cache: true
+
+    #   - name: Create venv for ${{ matrix.python-version }}
+    #     run: uv venv --python ${{ matrix.python-version }}
+
+      - name: Sync dependencies
+        run: uv sync --python ${{ matrix.python-version }} --frozen
+
+      # Optional: prove we're using the right interpreter
+      - name: Show Python used by uv
+        run: uv run --python ${{ matrix.python-version }} python -V
+
+      - name: Lint
+        run: uv run --python ${{ matrix.python-version }} ruff check ./src
+
+      - name: Typecheck
+        run: |
+          uv run --python ${{ matrix.python-version }} basedpyright ./src
+
+      - name: Check formatting
+        run: |
+          uv run --python ${{ matrix.python-version }} ruff format --check ./src
+
+      - name: Test
+        run: uv run --python ${{ matrix.python-version }} pytest -q
+
+      - name: Coverage
+        run: uv run --python ${{ matrix.python-version }} pytest --cov=torusdk --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+    #   - name: Enforce Towncrier fragment on PRs
+    #     if: ${{ github.event_name == 'pull_request' }}
+    #     run: uv run --python ${{ matrix.python-version }} towncrier check --compare-with origin/main
+
+      - name: Build package
+        run: uv run --python ${{ matrix.python-version }} uv build
