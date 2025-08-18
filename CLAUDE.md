@@ -167,7 +167,7 @@ torusdk/
 The project uses GitHub Actions with Ubicloud runners and UV for fast dependency management:
 
 - **Workflow**: `.github/workflows/check-code.yml`
-- **Matrix testing**: Python 3.10, 3.11, 3.12
+- **Matrix testing**: Python 3.10, 3.12
 - **Setup**: astral-sh/setup-uv with caching enabled
 - **Checks**: Linting, type checking, testing, coverage, build validation
 - **PR Requirements**: Towncrier fragment must be added

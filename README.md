@@ -30,7 +30,7 @@ development. To learn more [visit docs](https://docs.torus.network/installation/
 
 ## Installation with pip
 
-Requirements: Python 3.11+
+Requirements: Python 3.10-3.12
 
 Install the `torus` Python package directly with `pip`:
 
