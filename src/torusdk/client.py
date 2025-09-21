@@ -652,7 +652,9 @@ class TorusClient:
         return result_dict
 
     def query_batch(
-        self, functions: dict[str, list[tuple[str, list[Any]]]]
+        self,
+        functions: dict[str, list[tuple[str, list[Any]]]],
+        block_hash: str | None = None,
     ) -> dict[str, str]:
         """
         Executes batch queries on a substrate and returns results in a dictionary format.
@@ -683,8 +685,8 @@ class TorusClient:
                         pallet=module, storage_function=fn, params=params
                     )
                     storage_keys.append(storage_function)
-
-                block_hash = substrate.get_block_hash()
+                if not block_hash:
+                    block_hash = substrate.get_block_hash()
                 responses: list[Any] = substrate.query_multi(  # type: ignore
                     storage_keys=storage_keys, block_hash=block_hash
                 )
@@ -799,7 +801,9 @@ class TorusClient:
             NetworkQueryError: If the query fails or is invalid.
         """
 
-        result = self.query_batch({module: [(name, params)]})
+        result = self.query_batch(
+            {module: [(name, params)]}, block_hash=block_hash
+        )
 
         return result[name]
 

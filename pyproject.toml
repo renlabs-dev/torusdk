@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "torusdk"
-version = "0.2.4.1"
+version = "0.2.4.2"
 description = "Torus network official CLI"
 authors = ["renlabs <info@agicommies.org>"]
 license = "MIT"
@@ -24,7 +24,7 @@ ignore = [
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 
-torustrateinterface = "^0.1.0"
+torustrateinterface = "0.1.2"
 # Substrate
 # substrate-interface = "^1.7.4"
 scalecodec = "^1.2.7"

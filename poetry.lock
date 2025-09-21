@@ -2399,13 +2399,13 @@ files = [
 
 [[package]]
 name = "torustrateinterface"
-version = "0.1.0"
+version = "0.1.2"
 description = "substrate-interface fork"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "torustrateinterface-0.1.0-py3-none-any.whl", hash = "sha256:905975d6a48b9cf8c65cc989e70bf6bf764ef8950bf2bdfa3a791498fc0138fb"},
-    {file = "torustrateinterface-0.1.0.tar.gz", hash = "sha256:d41cd994a09d5cd105cf3e4b438f7f53ae881dc60e4661bccb1391c37779e42a"},
+    {file = "torustrateinterface-0.1.2-py3-none-any.whl", hash = "sha256:e14ff54b1e2b3c4199c58e58068cafe41e8197a874696970ad6bccfc305017c1"},
+    {file = "torustrateinterface-0.1.2.tar.gz", hash = "sha256:f6d2792416bcde251f5ed5681c6237e9e4f1ad33518d5634ab1854ad94cbbaa5"},
 ]
 
 [package.dependencies]
@@ -2728,4 +2728,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "11fdfe1e4808ceeed1dad9cf644811546ca03e6370a18a238e64be32bfeee718"
+content-hash = "a5a1d50e49fe3342465034b63758bb6f3031a5148af66f355ad755c6c051f1ea"
